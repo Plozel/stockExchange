@@ -1,0 +1,7 @@
+{
+  "LSTM model": {
+    "batch_size": 10,
+    "lr": 0.001,
+    "num_of_epochs":2
+  }
+}

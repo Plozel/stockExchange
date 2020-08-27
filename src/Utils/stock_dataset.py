@@ -5,15 +5,19 @@ import csv
 
 
 class StockExchangeDataset(Dataset):
+    """Creates a Dataset object for the StockExchange data."""
+
     def __init__(self):
         super().__init__()
         self.data = pd.read_csv("data/train_data.csv", quoting=csv.QUOTE_NONE, error_bad_lines=False)
         self.data.where(pd.notna(self.data), self.data.mean(), axis='columns')
-        self.dataset = self.convert_to_dataset()
+        self.dataset = self.preprocess_data()
 
-    def convert_to_dataset(self):
+    def preprocess_data(self):
+        """Clean, handle missing data and covert the data to a TensorDataset object"""
+
         features = self.data.iloc[:, 2:80]
-        # change 25/75/YE from categorical to integer
+        # change "25/75/YE" from categorical to integer
         features["25/75/YE"], _ = pd.factorize(features["25/75/YE"])
         features = torch.tensor(features.values)
         real_y_1 = torch.tensor(self.data.loc[:, 'TMRW1_IXChange'].values)
