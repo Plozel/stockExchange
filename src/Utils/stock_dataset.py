@@ -9,7 +9,7 @@ class StockExchangeDataset(Dataset):
 
     def __init__(self):
         super().__init__()
-        self.data = pd.read_csv("data/train_data.csv", quoting=csv.QUOTE_NONE, error_bad_lines=False)
+        self.data = pd.read_csv("../data/train_data.csv", quoting=csv.QUOTE_NONE, error_bad_lines=False)
         self.data.where(pd.notna(self.data), self.data.mean(), axis='columns')
         self.dataset = self.preprocess_data()
 
@@ -19,9 +19,9 @@ class StockExchangeDataset(Dataset):
         features = self.data.iloc[:, 2:80]
         # change "25/75/YE" from categorical to integer
         features["25/75/YE"], _ = pd.factorize(features["25/75/YE"])
-        features = torch.tensor(features.values)
-        real_y_1 = torch.tensor(self.data.loc[:, 'TMRW1_IXChange'].values)
-        real_y_2 = torch.tensor(self.data.loc[:, 'TMRW2_IXChange'].values)
+        features = torch.tensor(features.values).float()
+        real_y_1 = torch.tensor(self.data.loc[:, 'TMRW1_IXChange'].values).float()
+        real_y_2 = torch.tensor(self.data.loc[:, 'TMRW2_IXChange'].values).float()
         dataset = TensorDataset(features, real_y_1, real_y_2)
         return dataset
 

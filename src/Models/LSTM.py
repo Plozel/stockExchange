@@ -15,3 +15,6 @@ class LSTMModel(nn.Module):
 
         return x
 
+
+def run():
+    pass

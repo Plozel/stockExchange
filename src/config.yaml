@@ -1,0 +1,15 @@
+{
+  "Data":{
+    "train_percent": 0.8
+  } ,
+  "LSTM": {
+    "batch_size": 10,
+    "lr": 0.001,
+    "num_of_epochs":2
+  },
+  "MLP": {
+    "batch_size": 10,
+    "lr": 0.001,
+    "num_of_epochs":1
+  }
+}
