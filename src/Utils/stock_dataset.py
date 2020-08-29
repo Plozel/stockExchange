@@ -17,7 +17,9 @@ class StockExchangeDataset(Dataset):
         """Clean, handle missing data and covert the data to a TensorDataset object"""
 
         features = self.data.iloc[:, 2:80]
-        # change "25/75/YE" from categorical to integer
+        # normalize the features
+        features = (features - features.mean()) / features.std()
+        # change "25/75/YE" from categorical to integer # TODO add embedding
         features["25/75/YE"], _ = pd.factorize(features["25/75/YE"])
         features = torch.tensor(features.values).float()
         real_y_1 = torch.tensor(self.data.loc[:, 'TMRW1_IXChange'].values).float()
