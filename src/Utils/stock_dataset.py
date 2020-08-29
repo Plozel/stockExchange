@@ -10,17 +10,22 @@ class StockExchangeDataset(Dataset):
     def __init__(self):
         super().__init__()
         self.data = pd.read_csv("../data/train_data.csv", quoting=csv.QUOTE_NONE, error_bad_lines=False)
-        self.data.where(pd.notna(self.data), self.data.mean(), axis='columns')
         self.dataset = self.preprocess_data()
 
     def preprocess_data(self):
         """Clean, handle missing data and covert the data to a TensorDataset object"""
 
+        # fill missing values
+        self.data.where(pd.notna(self.data), self.data.mean(), axis='columns')
         features = self.data.iloc[:, 2:80]
         # normalize the features
-        features = (features - features.mean()) / features.std()
+        # features = (features - features.mean()) / features.std()
+
         # change "25/75/YE" from categorical to integer # TODO add embedding
         features["25/75/YE"], _ = pd.factorize(features["25/75/YE"])
+        # scale the features between 0 to 1
+        features = (features - features.min()) / features.max()
+
         features = torch.tensor(features.values).float()
         real_y_1 = torch.tensor(self.data.loc[:, 'TMRW1_IXChange'].values).float()
         real_y_2 = torch.tensor(self.data.loc[:, 'TMRW2_IXChange'].values).float()
