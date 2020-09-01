@@ -6,15 +6,13 @@ class MLPModel(nn.Module):
     def __init__(self):
         super(MLPModel, self).__init__()
         self.seq = nn.Sequential(
-            nn.Linear(78, 300),
-            nn.LeakyReLU(),
-            nn.Linear(300, 500),
-            nn.LeakyReLU(),
-            nn.Linear(500, 400),
-            nn.LeakyReLU(),
-            nn.Linear(400, 200),
-            nn.LeakyReLU(),
-            nn.Linear(200, 1)
+            nn.Linear(68, 300),
+            nn.Tanh(),
+            nn.Dropout(0.5),
+            nn.Linear(300, 68),
+            nn.Dropout(0.3),
+            nn.Tanh(),
+            nn.Linear(68, 1),
         )
 
     def forward(self, x):
@@ -34,3 +32,4 @@ class LSTMModel(nn.Module):
         x = self.predictor(x)
 
         return x
+

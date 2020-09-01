@@ -7,9 +7,9 @@ import csv
 class StockExchangeDataset(Dataset):
     """Creates a Dataset object for the StockExchange data."""
 
-    def __init__(self):
+    def __init__(self, set_name):
         super().__init__()
-        self.data = pd.read_csv("../data/train_data.csv", quoting=csv.QUOTE_NONE, error_bad_lines=False)
+        self.data = pd.read_csv("../data/{}.csv".format(set_name), quoting=csv.QUOTE_NONE, error_bad_lines=False)
         self.dataset = self.preprocess_data()
 
     def preprocess_data(self):
@@ -17,18 +17,19 @@ class StockExchangeDataset(Dataset):
 
         # fill missing values
         self.data.where(pd.notna(self.data), self.data.mean(), axis='columns')
-        features = self.data.iloc[:, 2:80]
+        features = self.data.iloc[:, 11:79]
+
         # normalize the features
         # features = (features - features.mean()) / features.std()
 
         # change "25/75/YE" from categorical to integer # TODO add embedding
-        features["25/75/YE"], _ = pd.factorize(features["25/75/YE"])
+        # features["25/75/YE"], _ = pd.factorize(features["25/75/YE"])
         # scale the features between 0 to 1
         features = (features - features.min()) / features.max()
 
         features = torch.tensor(features.values).float()
-        real_y_1 = torch.tensor(self.data.loc[:, 'TMRW1_IXChange'].values).float()
-        real_y_2 = torch.tensor(self.data.loc[:, 'TMRW2_IXChange'].values).float()
+        real_y_1 = torch.tensor(self.data.loc[:, 'TMRW1_Change'].values).float()
+        real_y_2 = torch.tensor(self.data.loc[:, 'TMRW2_Change'].values).float()
         dataset = TensorDataset(features, real_y_1, real_y_2)
         return dataset
 

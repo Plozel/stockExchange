@@ -1,7 +1,7 @@
 {
   "Data":{
     "training_data_path":"../data/train_data.csv",
-    "train_percent": 0.8
+    "train_percent": 1.0
   } ,
   "LSTM": {
     "batch_size": 10,
@@ -10,7 +10,7 @@
   },
   "MLP": {
     "batch_size": 1,
-    "lr": 0.0001,
-    "num_of_epochs":60
+    "lr": 0.001,
+    "num_of_epochs":100
   }
 }
