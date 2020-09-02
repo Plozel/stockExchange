@@ -1,6 +1,7 @@
 {
   "Data":{
-    "training_data_path":"../data/train_data.csv",
+    "train_set":"train_class",
+    "test_set": "test_class",
     "train_percent": 1.0
   } ,
   "LSTM": {

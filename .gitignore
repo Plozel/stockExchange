@@ -1,2 +1,4 @@
 /data/train_data.csv
 /data/test_data.csv
+/data/train_class.csv
+/data/test_class.csv

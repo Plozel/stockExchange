@@ -28,8 +28,8 @@ class StockExchangeDataset(Dataset):
         features = (features - features.min()) / features.max()
 
         features = torch.tensor(features.values).float()
-        real_y_1 = torch.tensor(self.data.loc[:, 'TMRW1_Change'].values).float()
-        real_y_2 = torch.tensor(self.data.loc[:, 'TMRW2_Change'].values).float()
+        real_y_1 = torch.tensor(self.data.loc[:, 'class'].values).long()
+        real_y_2 = torch.tensor(self.data.loc[:, 'class'].values).long()
         dataset = TensorDataset(features, real_y_1, real_y_2)
         return dataset
 

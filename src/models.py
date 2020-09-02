@@ -1,18 +1,14 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class MLPModel(nn.Module):
     def __init__(self):
         super(MLPModel, self).__init__()
         self.seq = nn.Sequential(
-            nn.Linear(68, 300),
-            nn.Tanh(),
-            nn.Dropout(0.5),
-            nn.Linear(300, 68),
-            nn.Dropout(0.3),
-            nn.Tanh(),
-            nn.Linear(68, 1),
+            nn.Linear(68, 7),
+            nn.Softmax(dim=1)
         )
 
     def forward(self, x):
