@@ -47,6 +47,9 @@ if __name__ == '__main__':
     # scale the data between 0  to 1
     train_data.iloc[:, 2:] = (train_data.iloc[:, 2:] - train_data.iloc[:, 2:].min()) / train_data.iloc[:, 2:].max()
     print(train_data.columns)
+
+    # print(train_data.loc[:, 'class'].value_counts(normalize=True))
+
     train_data.hist(figsize=(30, 30))
 
     plt.show()
