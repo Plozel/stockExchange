@@ -127,7 +127,8 @@ class ConvNet(nn.Module):
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
-        x = [torch.roll(x, shifts=1, dims=1).unsqueeze(1) for i in range(x.shape[1])]
+        # x = [torch.roll(x, shifts=i, dims=1).unsqueeze(1) for i in range(x.shape[1])]
+        x = [x.unsqueeze(1) for i in range(x.shape[1])]
         x = torch.cat(x, 1).unsqueeze(1)
         x = self.first_layer(x)
         x = self.a3(x)

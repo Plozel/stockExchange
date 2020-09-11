@@ -11,10 +11,11 @@
   },
   "MLP": {
     "batch_size": 500,
-    "lr": 0.0001,
-    "num_of_epochs":1000,
+    "lr": 0.001,
+    "num_of_epochs":1,
     "input_size":54,
-    "hidden_size":1000,
-    "target_idx":80
+    "hidden_size":100,
+    "target_idx":80,
+    "wegihts": [0.98, 0.95, 1.04]
   }
 }

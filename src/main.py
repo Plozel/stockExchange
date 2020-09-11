@@ -10,11 +10,12 @@ import torch
 from torch.utils.data.dataloader import DataLoader
 import torch.optim as optim
 import torch.nn as nn
+# from kornia.losses import FocalLoss
 
 from tqdm import tqdm
 
 from Utils.stock_dataset import StockExchangeDataset
-from Utils.utils import print_plots
+from Utils.utils import print_plots, FocalLoss
 from models import MLPModel, ConvNet
 
 if __name__ == '__main__':
@@ -30,9 +31,10 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = ConvNet().to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=config["MLP"]["lr"])
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=10, verbose=True)
-    # weight = torch.tensor([0.9, 0.65, 1.05])
-    criterion = nn.CrossEntropyLoss(weight=torch.tensor([0.99, 0.97, 1.0])).to(device)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=20, verbose=True)
+    # weight=torch.tensor([0.9, 0.65, 1.05])
+    criterion = nn.CrossEntropyLoss().to(device)
+    # criterion = FocalLoss(weight=torch.tensor(config["MLP"]["weights"]).to(device))
     criterion2 = nn.CrossEntropyLoss().to(device)
     start_time = timer()
 
@@ -96,6 +98,10 @@ if __name__ == '__main__':
                 features, real_y_1, real_y_2 = test_batch[0].to(device), test_batch[1].to(device), test_batch[2].to(device)
                 # real_y_1 = real_y_1.unsqueeze(1)
                 output = model(features).to(device)
+                # threshold = 0.6
+                # for i in range(output.shape[0]):
+                #     if output[i, 1] < threshold:
+                #         output[i, 1] = 0
                 _, predicted = torch.max(output.data, 1)
 
                 loss = criterion(output, real_y_1)
@@ -123,13 +129,24 @@ if __name__ == '__main__':
         predictions = pd.Series(predictions)
         print(predictions.value_counts(normalize=True))
 
-    print_plots(train_acc_list, train_loss_list, test_acc_list, test_loss_list, directory_path, time_id)
-    end_time = timer()
-    print("the training took: {} sec ".format(round(end_time - start_time, 2)))
+        print_plots(train_acc_list, train_loss_list, test_acc_list, test_loss_list, directory_path, time_id)
 
-    with open('parser_settings.csv', 'a') as f:
+        with open('{}/log{}.csv'.format(directory_path, time_id), 'a') as f:
+            writer = csv.writer(f)
+            writer.writerow(
+                [time_id, max_test_acc, epoch_test_min, config["MLP"]["num_of_epochs"], config["MLP"]["batch_size"],
+                 config["MLP"]["lr"]])
+
+    with open('../TrainedModels/general_log.csv'.format(directory_path, time_id), 'a') as f:
         writer = csv.writer(f)
-        writer.writerow([time_id, max_test_acc, epoch_test_min, config["MLP"]["num_of_epochs"], config["MLP"]["batch_size"], config["MLP"]["lr"]])
+        writer.writerow(
+            [time_id, max_test_acc, epoch_test_min, config["MLP"]["num_of_epochs"], config["MLP"]["batch_size"],
+             config["MLP"]["lr"]])
+
+    end_time = timer()
+    print("Finish training, it took: {} sec ".format(round(end_time - start_time, 2)))
+
+
 
 
 
