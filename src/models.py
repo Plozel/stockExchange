@@ -50,8 +50,6 @@ class LSTMModel(nn.Module):
         return x
 
 
-
-
 class Inception(nn.Module):
     def __init__(self, in_channels, nof1x1, nof3x3_1, nof3x3_out, nof5x5_1, nof5x5_out, pool_planes):
         super(Inception, self).__init__()
@@ -100,14 +98,16 @@ class Inception(nn.Module):
 
 
 class ConvNet(nn.Module):
-    def __init__(self):
+    def __init__(self, num_of_ids):
         super(ConvNet, self).__init__()
 
         self.first_layer = nn.Sequential(
-            nn.Conv2d(1, 30, kernel_size=3, padding=1),
+            nn.Conv2d(1, 30, kernel_size=config["MLP"]["first_layer_kernel"], padding=1),
             nn.BatchNorm2d(30),
             nn.ReLU(),
         )
+        self.id_embedding = nn.Embedding(num_of_ids, config["MLP"]["id_emb_dim"])
+        self.sml_embedding = nn.Embedding(3, config["MLP"]["sml_emb_dim"])
 
         self.a3 = Inception(30, 10,  4, 12, 4, 8, 8)
         self.b3 = Inception(38, 14,  6, 16, 4, 10, 10)
@@ -122,12 +122,17 @@ class ConvNet(nn.Module):
 
         self.avgpool = nn.AvgPool2d(1, stride=1)
         self.dropout = nn.Dropout(p=0.3)
-        self.linear = nn.Linear(21560, 3)
+        self.linear = nn.Linear(58190, 3)
 
         self.softmax = nn.Softmax(dim=1)
 
-    def forward(self, x):
-        # x = [torch.roll(x, shifts=i, dims=1).unsqueeze(1) for i in range(x.shape[1])]
+    def forward(self, stock_id, sml,  x):
+
+        stock_id = self.id_embedding(stock_id)
+        sml = self.sml_embedding(sml)
+
+        x = torch.cat([stock_id, sml, x], 1)
+
         x = [x.unsqueeze(1) for i in range(x.shape[1])]
         x = torch.cat(x, 1).unsqueeze(1)
         x = self.first_layer(x)
@@ -142,6 +147,7 @@ class ConvNet(nn.Module):
         x = self.dropout(x)
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
+        # print(x.shape)
         x = self.linear(x)
 
         return self.softmax(x)

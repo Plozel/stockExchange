@@ -1,7 +1,7 @@
 {
   "Data":{
     "train_set":"train_class",
-    "test_set": "test_class",
+    "test_set": "test_class_3_week",
     "train_percent": 1.0
   } ,
   "LSTM": {
@@ -10,12 +10,18 @@
     "num_of_epochs":2
   },
   "MLP": {
-    "batch_size": 500,
+    "batch_size": 100,
     "lr": 0.001,
-    "num_of_epochs":1,
-    "input_size":54,
+    "num_of_epochs":120,
+    "input_size":61,
     "hidden_size":100,
     "target_idx":80,
-    "wegihts": [0.98, 0.95, 1.04]
+    "loss wegihts": [0.98, 0.95, 1.04],
+    "first_layer_kernel": 2,
+    "id_emb_dim": 20,
+    "sml_emb_dim":10,
+    "majority_threshold":0.4,
+    "num_of_slice_normalization": 10,
+    "comment": "3 weeks' test + normalization in slices"
   }
 }
