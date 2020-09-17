@@ -5,3 +5,6 @@
 /data/test_class_seq.csv
 /data/test_class_3_week.csv
 /data/train_class_seq.csv
+/data/train_downdampled.csv
+/data/test_class_1_2.csv
+/data/train_class_1_2.csv

@@ -38,15 +38,26 @@ class MLPModel(nn.Module):
 
 class LSTMModel(nn.Module):
 
-    def __init__(self, input_size, hidden_size, num_of_layers, is_bidirectional=False):
+    def __init__(self,num_of_ids, input_size, hidden_size, num_of_layers, is_bidirectional=False):
         super(LSTMModel, self).__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.predictor = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_of_layers,
                                  bidirectional=is_bidirectional, batch_first=True)
 
-    def forward(self, x):
-        x = self.predictor(x)
+        # self.id_embedding = nn.Embedding(num_of_ids, config["MLP"]["id_emb_dim"])
+        # self.sml_embedding = nn.Embedding(3, config["MLP"]["sml_emb_dim"])
 
+        self.linear = nn.Linear(10, 3)
+    def forward(self, x, y, z):
+        # stock_id = self.id_embedding(x)
+        # sml = self.sml_embedding(y)
+        # print(stock_id.shape)
+        # print(sml.shape)
+        # print(z.shape)
+        #
+        # x = torch.cat([stock_id, sml, z], 2)
+        x, _ = self.predictor(z)
+        x = self.linear(x)
         return x
 
 
@@ -122,7 +133,7 @@ class ConvNet(nn.Module):
 
         self.avgpool = nn.AvgPool2d(1, stride=1)
         self.dropout = nn.Dropout(p=0.3)
-        self.linear = nn.Linear(58190, 3)
+        self.linear = nn.Linear(53240, 3)
 
         self.softmax = nn.Softmax(dim=1)
 
@@ -130,9 +141,7 @@ class ConvNet(nn.Module):
 
         stock_id = self.id_embedding(stock_id)
         sml = self.sml_embedding(sml)
-
         x = torch.cat([stock_id, sml, x], 1)
-
         x = [x.unsqueeze(1) for i in range(x.shape[1])]
         x = torch.cat(x, 1).unsqueeze(1)
         x = self.first_layer(x)
