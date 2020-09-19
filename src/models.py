@@ -133,7 +133,7 @@ class ConvNet(nn.Module):
 
         self.avgpool = nn.AvgPool2d(1, stride=1)
         self.dropout = nn.Dropout(p=0.3)
-        self.linear = nn.Linear(53240, 3)
+        self.linear = nn.Linear(53240, 9)
 
         self.softmax = nn.Softmax(dim=1)
 
@@ -160,3 +160,76 @@ class ConvNet(nn.Module):
         x = self.linear(x)
 
         return self.softmax(x)
+
+
+class ConvNetFactor(nn.Module):
+    def __init__(self, num_of_ids):
+        super(ConvNetFactor, self).__init__()
+
+        self.first_layer = nn.Sequential(
+            nn.Conv2d(1, 30, kernel_size=config["MLP"]["first_layer_kernel"], padding=1),
+            nn.BatchNorm2d(30),
+            nn.ReLU(),
+        )
+        self.id_embedding = nn.Embedding(num_of_ids, config["MLP"]["id_emb_dim"])
+        self.sml_embedding = nn.Embedding(3, config["MLP"]["sml_emb_dim"])
+
+        self.a3 = Inception(30, 10,  4, 12, 4, 8, 8)
+        self.b3 = Inception(38, 14,  6, 16, 4, 10, 10)
+
+        self.maxpool = nn.MaxPool2d(3, stride=2, padding=1)
+
+        self.a4 = Inception(50, 20,  8, 20, 4, 12, 12)
+        self.b4 = Inception(64, 22,  9, 24, 4, 14, 16)
+
+        self.a5 = Inception(76, 26,  12, 28, 4, 18, 18)
+        self.b5 = Inception(90, 34,  16, 36, 6, 20, 20)
+
+        self.avgpool = nn.AvgPool2d(1, stride=1)
+        self.dropout = nn.Dropout(p=0.3)
+        self.linear = nn.Linear(58190, 3)
+        self.softmax = nn.Softmax(dim=1)
+
+    def forward(self, stock_id, sml,  x):
+        stock_id = self.id_embedding(stock_id)
+        sml = self.sml_embedding(sml)
+        x = torch.cat([stock_id, sml, x], 1)
+        x = [x.unsqueeze(1) for i in range(x.shape[1])]
+        x = torch.cat(x, 1).unsqueeze(1)
+        #################################################################
+        #                       X1                                      #
+        #################################################################
+        x1 = self.first_layer(x)
+        x1 = self.a3(x1)
+        x1 = self.b3(x1)
+        x1 = self.maxpool(x1)
+        x1 = self.a4(x1)
+        x1 = self.b4(x1)
+        x1 = self.maxpool(x1)
+        x1 = self.a5(x1)
+        x1 = self.b5(x1)
+        x1 = self.dropout(x1)
+        x1 = self.avgpool(x1)
+        x1 = x1.view(x1.size(0), -1)
+        #print("tom",x.shape)
+        x2 = self.linear(x1)
+        x1 = self.linear(x1)
+        """
+        #################################################################
+        #                       X2                                      #
+        #################################################################
+        x2 = self.first_layer(x)
+        x2 = self.a3(x2)
+        x2 = self.b3(x2)
+        x2 = self.maxpool(x2)
+        x2 = self.a4(x2)
+        x2 = self.b4(x2)
+        x2 = self.maxpool(x2)
+        x2 = self.a5(x2)
+        x2 = self.b5(x2)
+        x2 = self.dropout(x2)
+        x2 = self.avgpool(x2)
+        x2 = x2.view(x2.size(0), -1)
+        #print("tom",x.shape)
+        x2 = self.linear(x2)"""
+        return self.softmax(x1), self.softmax(x2)

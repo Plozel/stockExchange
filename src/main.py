@@ -14,9 +14,11 @@ import torch.nn as nn
 
 from tqdm import tqdm
 
-from Utils.stock_dataset import StockExchangeDataset, StockExchangeSeqDataset
+from Utils.stock_dataset import StockExchangeDataset
 from Utils.utils import print_plots, FocalLoss
 from models import MLPModel, ConvNet
+
+from src.models import ConvNetFactor
 
 if __name__ == '__main__':
     config = yaml.safe_load(open("config.yaml"))
@@ -30,19 +32,21 @@ if __name__ == '__main__':
     test_loader = DataLoader(test, config["MLP"]["batch_size"], shuffle=False, num_workers=8, pin_memory=True)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = ConvNet(num_of_ids).to(device)
+    model = ConvNetFactor(num_of_ids).to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=config["MLP"]["lr"])
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, patience=30, verbose=True)
+    #print(sum(p.numel() for p in model.parameters() if p.requires_grad))
     criterion = nn.CrossEntropyLoss().to(device)
     start_time = timer()
     threshold = config["MLP"]["majority_threshold"]
 
     train_loss_list = []
     test_loss_list = []
-    train_acc_list = []
-    test_acc_list = []
-    train_confident_acc_list = []
-    test_confident_acc_list = []
+    train_1_acc_list = []
+    print(train_1_acc_list)
+    test_1_acc_list = []
+    train_2_acc_list = []
+    test_2_acc_list = []
 
     max_test_acc = 0  # 10000 is just a random big number
     epoch_test_max = 0
@@ -56,54 +60,42 @@ if __name__ == '__main__':
     for epoch in range(config["MLP"]["num_of_epochs"]):
 
         model.train()
-        predictions = []
-        predictions_with_confidence = []
-        real_values = []
-        correct_with_confidence = 0
-        predicted_with_confidence = 0
+        predictions1 = []
+        predictions2 = []
         printable_loss = 0
-        correct = 0
+        correct1 = 0
+        correct2 = 0
         num_of_obs = 0
         i = 0
         for train_batch in tqdm(train_loader):
-            stocks_id, sml, features, real_y_1, real_y_2 = train_batch[0].to(device), train_batch[1].to(device), train_batch[2].to(device), train_batch[3].to(device), train_batch[4].to(device)
+            stocks_id, sml, features, real_y_1, real_y_2, real_y_1_2 = train_batch[0].to(device), train_batch[1].to(device), train_batch[2].to(device), train_batch[3].to(device), train_batch[4].to(device), train_batch[5].to(device)
             model.zero_grad()
-
-            output = model(stocks_id, sml, features)
-            predicted_prob, predicted = torch.max(output.data, 1)
-
-            loss = criterion(output, real_y_1)
+            output1, output2 = model(stocks_id, sml, features)
+            predicted_prob1, predicted1 = torch.max(output1.data, 1)
+            predicted_prob2, predicted2 = torch.max(output2.data, 1)
+            loss1 = criterion(output1, real_y_1)
+            loss2 = criterion(output2, real_y_2)
+            loss = loss1 + loss2
             printable_loss += loss.item()
             loss.backward()
-            # To watch the gradient flow:
-            # 1) plot_grad_flow(model.named_parameters())
             optimizer.step()
-            correct += (predicted == real_y_1).sum()
-
-            correct_probs = predicted_prob[predicted == real_y_1]
-            correct_with_confidence += len(correct_probs[correct_probs > threshold])
-            predicted_with_confidence += len(predicted_prob[predicted_prob > threshold])
-
+            correct1 += (predicted1 == real_y_1).sum()
+            correct2 += (predicted1 == real_y_2).sum()
             num_of_obs += len(real_y_1)
-            predictions.extend(predicted.tolist())
-
-            correct_pred = predicted[predicted == real_y_1]
-            correct_pred_probs = predicted_prob[predicted == real_y_1]
-            predictions_with_confidence.extend(correct_pred[correct_pred_probs > threshold].tolist())
-
+            predictions1.extend(predicted1.tolist())
+            predictions2.extend(predicted2.tolist())
             i += 1
-        # 2) plt.show()
 
-        predictions = pd.Series(predictions)
-        predictions_with_confidence = pd.Series(predictions_with_confidence)
-        print("train predictions distribution:")
-        print(predictions.value_counts(normalize=True))
-        print("train predictions with confidence distribution:")
-        print(predictions_with_confidence.value_counts(normalize=True))
-        print("number of predicted with confidence observations in the train is:{}".format(predicted_with_confidence))
-
-        train_confident_acc_list.append(correct_with_confidence/predicted_with_confidence)
-        train_acc_list.append(correct.item() / num_of_obs)
+        predictions1 = pd.Series(predictions1)
+        predictions2 = pd.Series(predictions2)
+        print("#############################################")
+        print("train predictions 1 distribution:")
+        print(predictions1.value_counts(normalize=True))
+        print("train predictions 2 distribution:")
+        print(predictions2.value_counts(normalize=True))
+        print("#############################################")
+        train_1_acc_list.append(correct1.item() / num_of_obs)
+        train_2_acc_list.append(correct2.item() / num_of_obs)
         train_loss_list.append(printable_loss/i)
 
         # save the model
@@ -112,64 +104,65 @@ if __name__ == '__main__':
 
 
         model.eval()
+        predictions1 = []
+        predictions2 = []
         printable_loss = 0
-        correct = 0
-        correct_with_confidence = 0
-        predicted_with_confidence = 0
-        i = 0
+        correct1 = 0
+        correct2 = 0
         num_of_obs = 0
-        predictions = []
-        predictions_with_confidence = []
+        i = 0
         for test_batch in tqdm(test_loader):
             with torch.no_grad():
-                stocks_id, sml, features, real_y_1, real_y_2 = test_batch[0].to(device), test_batch[1].to(device), \
+                stocks_id, sml, features, real_y_1, real_y_2, real_y_1_2 = test_batch[0].to(device), test_batch[1].to(device), \
                                                                test_batch[2].to(device), test_batch[3].to(device), \
-                                                               test_batch[4].to(device)
-                # model.zero_grad()
-
-                output = model(stocks_id, sml, features).to(device)
-                loss = criterion(output, real_y_1)
+                                                               test_batch[4].to(device), test_batch[5].to(device)
+                output1, output2 = model(stocks_id, sml, features)
+                predicted_prob1, predicted1 = torch.max(output1.data, 1)
+                predicted_prob2, predicted2 = torch.max(output2.data, 1)
+                loss1 = criterion(output1, real_y_1)
+                loss2 = criterion(output2, real_y_2)
+                loss = loss1 + loss2
                 printable_loss += loss.item()
-                predicted_prob, predicted = torch.max(output.data, 1)
 
-                correct += (predicted == real_y_1).sum()
-                correct_probs = predicted_prob[predicted == real_y_1]
-                correct_with_confidence += len(correct_probs[correct_probs > threshold])
-                predicted_with_confidence += len(predicted_prob[predicted_prob > threshold])
+                correct1 += (predicted1 == real_y_1).sum()
+                correct2 += (predicted1 == real_y_2).sum()
                 num_of_obs += len(real_y_1)
-                predictions.extend(predicted.tolist())
-                real_values.extend(real_y_1.tolist())
+                predictions1.extend(predicted1.tolist())
+                predictions2.extend(predicted2.tolist())
                 i += 1
 
-                correct_pred = predicted[predicted == real_y_1]
-                correct_pred_probs = predicted_prob[predicted == real_y_1]
-                predictions_with_confidence.extend(correct_pred[correct_pred_probs > threshold].tolist())
 
         scheduler.step(printable_loss)
-        print("number of predicted with confidence observations in the test is:{}".format(predicted_with_confidence))
-        test_confident_acc_list.append(correct_with_confidence/predicted_with_confidence)
-
-        test_acc_list.append(correct.item() / num_of_obs)
+        predictions1 = pd.Series(predictions1)
+        predictions2 = pd.Series(predictions2)
+        print("#############################################")
+        print("test predictions 1 distribution:")
+        print(predictions1.value_counts(normalize=True))
+        print("test predictions 2 distribution:")
+        print(predictions2.value_counts(normalize=True))
+        print("#############################################")
+        test_1_acc_list.append(correct1.item() / num_of_obs)
+        test_2_acc_list.append(correct2.item() / num_of_obs)
         test_loss_list.append(printable_loss/i)
 
-        if test_acc_list[-1] > max_test_acc:
-            max_test_acc = test_acc_list[-1]
+
+
+        if test1_acc_list[-1] > max_test_acc:
+            max_test_acc = test1_acc_list[-1]
             epoch_test_max = epoch
 
-        print("Let's get a taste of the result:")
-        print("prediction:", predictions[:100])
-        print("real values:", real_values[:100])
-        print("Epoch:{} Completed,\tTrain Loss:{},\t Train ACC:{},\t Train confident ACC:{} \tTest Loss:{}, \t Test ACC:{},\t test confident ACC:{}".format(epoch + 1, train_loss_list[-1], train_acc_list[-1], train_confident_acc_list[-1], test_loss_list[-1], test_acc_list[-1], test_confident_acc_list[-1]))
+        print("Epoch:{} Completed,\tTrain Loss:{},\t Train1 ACC:{},\t Train2 ACC:{} \tTest Loss:{}, \t Test1 ACC:{},\t test1 confident ACC:{}".format(epoch + 1, train_loss_list[-1], train_1_acc_list[-1], train_2_acc_list[-1], test_loss_list[-1], test_1_acc_list[-1], test_2_acc_list[-1]))
 
-        predictions = pd.Series(predictions)
-        predictions_with_confidence = pd.Series(predictions_with_confidence)
+        predictions1 = pd.Series(predictions1)
+        predictions2 = pd.Series(predictions2)
+        print("#############################################")
+        print("test predictions 1 distribution:")
+        print(predictions1.value_counts(normalize=True))
+        print("test predictions 2 distribution:")
+        print(predictions2.value_counts(normalize=True))
+        print("#############################################")
 
-        print("test predictions distribution:")
-        print(predictions.value_counts(normalize=True))
-        print("test predictions with confidence distribution:")
-        print(predictions_with_confidence.value_counts(normalize=True))
-
-        print_plots(train_acc_list, train_loss_list, test_acc_list, test_loss_list, directory_path, time_id)
+        print_plots(train1_acc_list, train_loss_list, test1_acc_list, test_loss_list, directory_path, time_id)
 
         with open('{}/log{}.csv'.format(directory_path, time_id), 'a') as f:
             writer = csv.writer(f)

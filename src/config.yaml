@@ -2,8 +2,8 @@
   "Data":{
     "train_seq_set": "train_class_seq",
     "test_seq_set": "test_class_seq",
-    "train_set":"train_class",
-    "test_set": "test_class",
+    "train_set":"train_class_1_2",
+    "test_set": "test_class_1_2",
     "train_percent": 1.0
   } ,
   "LSTM": {
@@ -23,7 +23,7 @@
     "first_layer_kernel": 2,
     "id_emb_dim": 20,
     "sml_emb_dim":10,
-    "majority_threshold":0.7,
+    "majority_threshold":0.8,
     "num_of_slice_normalization": 10,
     "comment": "3 weeks' test + normalization in slices"
   }
