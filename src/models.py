@@ -187,7 +187,8 @@ class ConvNetFactor(nn.Module):
 
         self.avgpool = nn.AvgPool2d(1, stride=1)
         self.dropout = nn.Dropout(p=0.3)
-        self.linear = nn.Linear(58190, 3)
+        self.linear1 = nn.Linear(58190, 3)
+        self.linear2 = nn.Linear(58190, 3)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, stock_id, sml,  x):
@@ -212,8 +213,8 @@ class ConvNetFactor(nn.Module):
         x1 = self.avgpool(x1)
         x1 = x1.view(x1.size(0), -1)
         #print("tom",x.shape)
-        x2 = self.linear(x1)
-        x1 = self.linear(x1)
+        x2 = self.linear2(x1)
+        x1 = self.linear1(x1)
         """
         #################################################################
         #                       X2                                      #

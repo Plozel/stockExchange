@@ -80,7 +80,7 @@ if __name__ == '__main__':
             loss.backward()
             optimizer.step()
             correct1 += (predicted1 == real_y_1).sum()
-            correct2 += (predicted1 == real_y_2).sum()
+            correct2 += (predicted2 == real_y_2).sum()
             num_of_obs += len(real_y_1)
             predictions1.extend(predicted1.tolist())
             predictions2.extend(predicted2.tolist())
@@ -125,7 +125,7 @@ if __name__ == '__main__':
                 printable_loss += loss.item()
 
                 correct1 += (predicted1 == real_y_1).sum()
-                correct2 += (predicted1 == real_y_2).sum()
+                correct2 += (predicted2 == real_y_2).sum()
                 num_of_obs += len(real_y_1)
                 predictions1.extend(predicted1.tolist())
                 predictions2.extend(predicted2.tolist())
@@ -146,11 +146,6 @@ if __name__ == '__main__':
         test_loss_list.append(printable_loss/i)
 
 
-
-        if test1_acc_list[-1] > max_test_acc:
-            max_test_acc = test1_acc_list[-1]
-            epoch_test_max = epoch
-
         print("Epoch:{} Completed,\tTrain Loss:{},\t Train1 ACC:{},\t Train2 ACC:{} \tTest Loss:{}, \t Test1 ACC:{},\t test1 confident ACC:{}".format(epoch + 1, train_loss_list[-1], train_1_acc_list[-1], train_2_acc_list[-1], test_loss_list[-1], test_1_acc_list[-1], test_2_acc_list[-1]))
 
         predictions1 = pd.Series(predictions1)
@@ -162,7 +157,6 @@ if __name__ == '__main__':
         print(predictions2.value_counts(normalize=True))
         print("#############################################")
 
-        print_plots(train1_acc_list, train_loss_list, test1_acc_list, test_loss_list, directory_path, time_id)
 
         with open('{}/log{}.csv'.format(directory_path, time_id), 'a') as f:
             writer = csv.writer(f)
