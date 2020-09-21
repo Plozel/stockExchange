@@ -11,12 +11,11 @@ config = yaml.safe_load(open("config.yaml"))
 class StockExchangeDataset(Dataset):
     """Creates a Dataset object for the StockExchange data."""
 
-    def __init__(self, set_name, target_name, id_to_idx=None):
+    def __init__(self, set_name, id_to_idx=None):
         super().__init__()
         self.input_size = config["MLP"]["input_size"]
         self.target_idx = config["MLP"]["target_idx"]
         self.set_name = set_name
-        self.target_name = target_name
         self.data = pd.read_csv("../data/{}.csv".format(set_name), quoting=csv.QUOTE_NONE, error_bad_lines=False)
         self.id_to_idx = {}
         if id_to_idx:
@@ -70,23 +69,27 @@ class StockExchangeDataset(Dataset):
                 s_features.append(current_slice)
             features = pd.concat(s_features)
 
-        labels = self.data.loc[:, self.target_name]
-        # labels_2 = self.data.loc[:, 'class_2']
+        labels_1 = self.data.loc[:, 'class_1']
+        labels_2 = self.data.loc[:, 'class_2']
         # TODO: ugly...
         # in case of old labels
         # # if self.set_name == "train_class":
         # labels = labels.replace({1: 3, 2: 3, 7: 5, 6: 5})
         # labels = labels.replace({3: 0, 4: 1, 5: 2})
 
-        print("{} {} distribution:".format(self.set_name, self.target_name))
-        print(labels.value_counts(normalize=True))
+        print("{} class_1 distribution:".format(self.set_name))
+        print(labels_1.value_counts(normalize=True))
+        print(" ")
+        print("{} class_2 distribution:".format(self.set_name))
+        print(labels_2.value_counts(normalize=True))
 
 
         sml = torch.tensor(self.data["25/75/YE"].values).long()
         stocks_id = torch.tensor(stocks_id.values).long()
         features = torch.tensor(features.values).float()
-        real_y_1 = torch.tensor(labels.values).long()
-        dataset = TensorDataset(stocks_id, sml, features, real_y_1)
+        real_y_1 = torch.tensor(labels_1.values).long()
+        real_y_2 = torch.tensor(labels_2.values).long()
+        dataset = TensorDataset(stocks_id, sml, features, real_y_1, real_y_2)
         return dataset
 
     def __len__(self):

@@ -19,31 +19,31 @@ from Utils.utils import print_plots, FocalLoss, box_print
 from models import MLPModel, ConvNet
 
 
+
 class MainClassifier:
 
-    def __init__(self, target_name, model="conv"):
+    def __init__(self, target_name, model, train_dataset, test_dataset):
+        super().__init__()
+
         # config.yaml control the settings and other hyper parameters
         self.config = yaml.safe_load(open("config.yaml"))
 
-        print("\nBuilding the train dataset:")
-        self.train = StockExchangeDataset(self.config["Data"]["train_set"], target_name)
-        print("\nBuilding the test dataset:")
-        # the test use the id to idx of the train
-        self.test = StockExchangeDataset(self.config["Data"]["test_set"], target_name, self.train.id_to_idx)
-        print('\n')
-        num_of_ids = len(self.train.id_to_idx)
+        self.train = train_dataset
+        self.test = test_dataset
+
+        self.num_of_ids = len(self.train.id_to_idx)
 
         self.train_loader = DataLoader(self.train, self.config["MLP"]["batch_size"], shuffle=True, num_workers=8, pin_memory=True)
         self.test_loader = DataLoader(self.test, self.config["MLP"]["batch_size"], shuffle=False, num_workers=8, pin_memory=True)
 
         # set the model and it's utils
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+        self.target_name = target_name
         if model == "conv":
-            self.model = ConvNet(num_of_ids).to(self.device)
+            self.model = ConvNet(self.num_of_ids).to(self.device)
         else:
             if model == "mlp":
-                self.model = MLPModel(num_of_ids).to(self.device)
+                self.model = MLPModel(self.num_of_ids).to(self.device)
             else:
                 print("Invalid model")
                 exit()
@@ -71,7 +71,7 @@ class MainClassifier:
         self.time_id = datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
 
         # creates directories to save trackers utils
-        self.directory_path = r"../TrainedModels/{}".format(self.time_id)
+        self.directory_path = r"../TrainedModels/{}_{}".format(self.target_name, self.time_id)
         os.mkdir(self.directory_path)
         os.mkdir(self.directory_path + "/pickles")
         os.mkdir(self.directory_path + "/figures")
@@ -94,10 +94,20 @@ class MainClassifier:
         i = 0
         for test_batch in tqdm(self.test_loader):
             with torch.no_grad():
-                stocks_id, sml, features, true_labels = test_batch[0].to(self.device), \
+                stocks_id, sml, features, true_labels_1, true_labels_2 = test_batch[0].to(self.device), \
                                                         test_batch[1].to(self.device), \
                                                         test_batch[2].to(self.device), \
-                                                        test_batch[3].to(self.device)
+                                                        test_batch[3].to(self.device), \
+                                                        test_batch[4].to(self.device)
+
+                if self.target_name == 'class_1':
+                    true_labels = true_labels_1
+                else:
+                    if self.target_name == 'class_2':
+                        true_labels = true_labels_2
+                    else:
+                        print("Invalid target")
+                        exit()
 
                 output = self.model(stocks_id, sml, features).to(self.device)
                 loss = self.criterion(output, true_labels)
@@ -162,10 +172,20 @@ class MainClassifier:
 
             i = 0
             for train_batch in tqdm(self.train_loader):
-                stocks_id, sml, features, true_labels = train_batch[0].to(self.device),\
+                stocks_id, sml, features, true_labels_1, true_labels_2 = train_batch[0].to(self.device),\
                                                                train_batch[1].to(self.device),\
                                                                train_batch[2].to(self.device),\
-                                                               train_batch[3].to(self.device)
+                                                               train_batch[3].to(self.device), \
+                                                               train_batch[4].to(self.device)
+
+                if self.target_name == 'class_1':
+                    true_labels = true_labels_1
+                else:
+                    if self.target_name == 'class_2':
+                        true_labels = true_labels_2
+                    else:
+                        print("Invalid target")
+                        exit()
 
                 self.model.zero_grad()
 
@@ -180,7 +200,7 @@ class MainClassifier:
                 # 1) plot_grad_flow(model.named_parameters())
                 self.optimizer.step()
 
-                # gathering the utils for the trackers (acc/confident acc)
+                # Gathers utils for the trackers (acc/confident acc)
                 num_of_correct += (predicted == true_labels).sum()
                 correct_probs = predicted_prob[predicted == true_labels]
                 num_of_correct_with_confidence += len(correct_probs[correct_probs > self.threshold])
@@ -215,7 +235,7 @@ class MainClassifier:
 
             print(
                 "Epoch:{} Completed,\tTrain Loss:{},\t Train ACC:{},\t Train confident ACC:{} \tTest Loss:{},"
-                " \t Test ACC:{},\t test confident ACC:{}".format(self.current_epoch + 1, self.train_loss_list[-1],
+                " \t Test ACC:{},\t Test confident ACC:{}".format(self.current_epoch + 1, self.train_loss_list[-1],
                                                                   self.train_acc_list[-1],
                                                                   self.train_confident_acc_list[-1],
                                                                   self.test_loss_list[-1], self.test_acc_list[-1],
@@ -231,7 +251,7 @@ class MainClassifier:
         end_time = timer()
         print("Finish training, it took: {} sec ".format(round(end_time - self.start_time, 2)))
 
-        return self.time_id, self.max_test_acc, self.epoch_test_max, self.directory_path, self.start_time
+        return self.time_id, self.max_test_acc, self.epoch_test_max
 
     def predict(self, stocks_id, sml, features):
 
