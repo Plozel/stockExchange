@@ -228,6 +228,9 @@ class MainClassifier:
                 writer.writerow(
                     [self.time_id, self.max_test_acc, self.epoch_test_max, self.config["MLP"]])
 
+        end_time = timer()
+        print("Finish training, it took: {} sec ".format(round(end_time - self.start_time, 2)))
+
         return self.time_id, self.max_test_acc, self.epoch_test_max, self.directory_path, self.start_time
 
     def predict(self, stocks_id, sml, features):
