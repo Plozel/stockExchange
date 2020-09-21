@@ -9,7 +9,7 @@ if __name__ == '__main__':
     config = yaml.safe_load(open("config.yaml"))
 
     class_1_classifier = MainClassifier('class_1')
-    class_2_classifier = MainClassifier('class_2', 'mlp')
+    class_2_classifier = MainClassifier('class_2', 'conv')
 
     time_id, max_test_acc, epoch_test_max, directory_path, start_time = class_2_classifier.run_train()
 

@@ -136,8 +136,8 @@ class MainClassifier:
         predictions_with_confidence = pd.Series(predictions_with_confidence)
 
         print("\n=================================================================")
-        print("test predictions distribution:{}\n".format(predictions.value_counts(normalize=True)))
-        print("test predictions with confidence distribution:{}\n".format(predictions_with_confidence.value_counts(normalize=True)))
+        print("test predictions distribution:\n{}\n".format(predictions.value_counts(normalize=True)))
+        print("test predictions with confidence distribution:\n{}\n".format(predictions_with_confidence.value_counts(normalize=True)))
         print("number of predicted with confidence observations in the test is:{}\n".format(num_of_predicted_with_confidence))
         print("=================================================================\n")
 
@@ -197,8 +197,8 @@ class MainClassifier:
             predictions = pd.Series(predictions)
             predictions_with_confidence = pd.Series(predictions_with_confidence)
             print("\n=================================================================")
-            print("Current train predictions distribution:{}\n".format(predictions.value_counts(normalize=True)))
-            print("Current train confident predictions distribution:{}\n".format(predictions_with_confidence.value_counts(normalize=True)))
+            print("Current train predictions distribution:\n{}\n".format(predictions.value_counts(normalize=True)))
+            print("Current train confident predictions distribution:\n{}\n".format(predictions_with_confidence.value_counts(normalize=True)))
             print("number of predicted with confident observations in the train is:{}".format(num_of_predicted_with_confidence))
             print("=================================================================\n")
 
