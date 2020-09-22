@@ -15,7 +15,7 @@ import torch.nn as nn
 from tqdm import tqdm
 
 from Utils.utils import print_plots, FocalLoss, box_print
-from models import MLPModel, ConvNet
+from models import MLPModel, ConvNet, PlozNet
 
 
 class MainClassifier:
@@ -88,11 +88,9 @@ class MainClassifier:
         # initialize trackers per epoch
         real_values = []
         predictions = []
-        predictions_with_confidence = []
         printable_loss = 0
-        num_of_correct = 0
-        num_of_correct_with_confidence = 0
-        num_of_predicted_with_confidence = 0
+        num_of_correct_1 = 0
+        num_of_correct_2 = 0
         num_of_obs = 0
 
         i = 0
@@ -105,49 +103,61 @@ class MainClassifier:
                                                         test_batch[4].to(self.device), \
                                                         test_batch[5].to(self.device)
 
-
-                output_1, output_2, output_3 = self.model(stocks_id, sml, features).to(self.device)
-                print("%%%%%%%%%%%%%%%%%%%%%%%%%%%%5")
-                print(output_1)
-                loss = self.criterion(output, true_labels)
+                output_1, output_2, output_3 = self.model(stocks_id, sml, features)
+                output = torch.zeros(output_1.shpae()[0],
+                                     self.config["MLP"]["num_of_classes"] * self.config["MLP"]["num_of_classes"])
+                output = output.to(self.device)
+                for i in range(len(output)):
+                    for j in range((self.config["MLP"]["num_of_classes"]) ** 2):
+                        if j == 0:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][0]) * (output_2[i][0])
+                        elif j == 1:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][0]) * (output_2[i][1])
+                        elif j == 2:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][0]) * (output_2[i][2])
+                        elif j == 3:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][1]) * (output_2[i][0])
+                        elif j == 4:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][1]) * (output_2[i][1])
+                        elif j == 5:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][1]) * (output_2[i][2])
+                        elif j == 6:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][2]) * (output_2[i][0])
+                        elif j == 7:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][2]) * (output_2[i][1])
+                        elif j == 8:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][2]) * (output_2[i][2])
+                self.softmax = nn.Softmax(dim=1)
+                output = self.softmax(output)
+                loss = self.criterion(output, true_labels_3)
                 printable_loss += loss.item()
                 # extracting predictions
                 predicted_prob, predicted = torch.max(output.data, 1)
 
-                # gathering the utils for the trackers (acc/confident acc)
-                num_of_correct += (predicted == true_labels).sum()
-                correct_probs = predicted_prob[predicted == true_labels]
-                num_of_correct_with_confidence += len(correct_probs[correct_probs > self.threshold])
-                num_of_predicted_with_confidence += len(predicted_prob[predicted_prob > self.threshold])
-                num_of_obs += len(true_labels)
-                predictions.extend(predicted.tolist())
-                real_values.extend(true_labels.tolist())
-                correct_pred = predicted[predicted == true_labels]
-                predictions_with_confidence.extend(correct_pred[correct_probs > self.threshold].tolist())
+                for i in range(len(true_labels_1)):
+                    num_of_obs += 1
+                    if (true_labels_1[i] == 0) and (predicted[i] in(0, 1, 2)):
+                        num_of_correct_1 += 1
+                    elif (true_labels_1[i] == 1) and (predicted[i] in(3, 4, 5)):
+                        num_of_correct_1 += 1
+                    elif (true_labels_1[i] == 2) and (predicted[i] in(6, 7, 8)):
+                        num_of_correct_1 += 1
 
                 i += 1
 
         self.scheduler.step(printable_loss)
-        self.test_confident_acc_list.append(num_of_correct_with_confidence / (num_of_predicted_with_confidence + 0.0001))
 
-        self.test_acc_list.append(num_of_correct.item() / num_of_obs)
+        self.test_acc_list.append(num_of_correct_1.item() / num_of_obs)
         self.test_loss_list.append(printable_loss / i)
 
-        if self.test_acc_list[-1] > self.max_test_acc:
-            self.max_test_acc = self.test_acc_list[-1]
-            self.epoch_test_max = self.current_epoch
+
 
         print("\nLet's get a taste of the result:")
-        print("prediction:", predictions[:100])
-        print("real values:", real_values[:100])
 
+        predictions.extend(predicted.tolist())
         predictions = pd.Series(predictions)
-        predictions_with_confidence = pd.Series(predictions_with_confidence)
-
         print("\n=================================================================")
         print("test predictions distribution:\n{}\n".format(predictions.value_counts(normalize=True)))
-        print("test predictions with confidence distribution:\n{}\n".format(predictions_with_confidence.value_counts(normalize=True)))
-        print("number of predicted with confidence observations in the test is:{}\n".format(num_of_predicted_with_confidence))
         print("=================================================================\n")
 
     def run_train(self):
@@ -162,11 +172,9 @@ class MainClassifier:
 
             # initialize trackers per epoch
             predictions = []
-            predictions_with_confidence = []
-            num_of_correct_with_confidence = 0
-            num_of_predicted_with_confidence = 0
             printable_loss = 0
-            num_of_correct = 0
+            num_of_correct_1 = 0
+            num_of_correct_2 = 0
             num_of_obs = 0
 
             i = 0
@@ -178,83 +186,85 @@ class MainClassifier:
                                                                train_batch[4].to(self.device),\
                                                                train_batch[5].to(self.device)
 
-                if self.target_name == 'class_1':
-                    true_labels = true_labels_1
-                else:
-                    if self.target_name == 'class_2':
-                        true_labels = true_labels_2
-                    else:
-                        if self.target_name == 'class_3':
-                            true_labels = true_labels_3
-                        else:
-                            print("Invalid target")
-                            exit()
 
                 self.model.zero_grad()
 
-                output = self.model(stocks_id, sml, features)
+                output_1, output_2, output_3 = self.model(stocks_id, sml, features)
+                output = torch.zeros(output_1.shpae()[0], self.config["MLP"]["num_of_classes"]*self.config["MLP"]["num_of_classes"])
+                output = output.to(self.device)
+                for i in range(len(output)):
+                    for j in range((self.config["MLP"]["num_of_classes"])**2):
+                        if j == 0:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][0]) * (output_2[i][0])
+                        elif j == 1:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][0]) * (output_2[i][1])
+                        elif j == 2:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][0])*(output_2[i][2])
+                        elif j == 3:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][1]) * (output_2[i][0])
+                        elif j == 4:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][1]) * (output_2[i][1])
+                        elif j == 5:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][1])*(output_2[i][2])
+                        elif j == 6:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][2]) * (output_2[i][0])
+                        elif j == 7:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][2]) * (output_2[i][1])
+                        elif j == 8:
+                            output[i][j] = (output_3[i][j]) * (output_1[i][2])*(output_2[i][2])
+                self.softmax = nn.Softmax(dim=1)
+                output = self.softmax(output)
+
                 # extracting predictions
                 predicted_prob, predicted = torch.max(output.data, 1)
 
-                loss = self.criterion(output, true_labels)
+                loss = self.criterion(output, true_labels_3)
                 printable_loss += loss.item()
                 loss.backward()
-                # To watch the gradient flow:
-                # 1) plot_grad_flow(model.named_parameters())
                 self.optimizer.step()
 
                 # Gathers utils for the trackers (acc/confident acc)
-                num_of_correct += (predicted == true_labels).sum()
-                correct_probs = predicted_prob[predicted == true_labels]
-                num_of_correct_with_confidence += len(correct_probs[correct_probs > self.threshold])
-                num_of_predicted_with_confidence += len(predicted_prob[predicted_prob > self.threshold])
-                num_of_obs += len(true_labels)
-                predictions.extend(predicted.tolist())
-                correct_pred = predicted[predicted == true_labels]
-                predictions_with_confidence.extend(correct_pred[correct_probs > self.threshold].tolist())
+                for i in range(len(true_labels_1)):
+                    num_of_obs += 1
+                    if (true_labels_1[i] == 0) and (predicted[i] in(0, 1, 2)):
+                        num_of_correct_1 += 1
+                    elif (true_labels_1[i] == 1) and (predicted[i] in(3, 4, 5)):
+                        num_of_correct_1 += 1
+                    elif (true_labels_1[i] == 2) and (predicted[i] in(6, 7, 8)):
+                        num_of_correct_1 += 1
+
 
                 i += 1
 
-            # 2) plt.show()
-
+            predictions.extend(predicted.tolist())
             predictions = pd.Series(predictions)
-            predictions_with_confidence = pd.Series(predictions_with_confidence)
             print("\n=================================================================")
             print("Current train predictions distribution:\n{}\n".format(predictions.value_counts(normalize=True)))
-            print("Current train confident predictions distribution:\n{}\n".format(predictions_with_confidence.value_counts(normalize=True)))
-            print("number of predicted with confident observations in the train is:{}".format(num_of_predicted_with_confidence))
             print("=================================================================\n")
 
-            self.train_confident_acc_list.append(num_of_correct_with_confidence / (num_of_predicted_with_confidence + 0.001))
-            self.train_acc_list.append(num_of_correct.item() / num_of_obs)
+            self.train_acc_list.append(num_of_correct_1.item() / num_of_obs)
             self.train_loss_list.append(printable_loss / i)
 
-            # saves the model
-            with open(r"{}/epoch_{}.pkl".format(self.directory_path + "/pickles", epoch), "wb") as output_file:
-                torch.save(self.model.state_dict(), output_file)
 
             # test the current model
-            self.run_test()
-
+            #self.run_test()
             print(
+                "Epoch:{} Completed,\tTrain Loss:{},\t Train ACC:{}".format(self.current_epoch + 1, self.train_loss_list[-1],
+                                                                  self.train_acc_list[-1]))
+            """print(
                 "Epoch:{} Completed,\tTrain Loss:{},\t Train ACC:{},\t Train confident ACC:{} \tTest Loss:{},"
                 " \t Test ACC:{},\t Test confident ACC:{}".format(self.current_epoch + 1, self.train_loss_list[-1],
                                                                   self.train_acc_list[-1],
                                                                   self.train_confident_acc_list[-1],
                                                                   self.test_loss_list[-1], self.test_acc_list[-1],
-                                                                  self.test_confident_acc_list[-1]))
+                                                                  self.test_confident_acc_list[-1]))"""
 
-            print_plots(self.train_acc_list, self.train_loss_list, self.test_acc_list, self.test_loss_list, self.directory_path, self.time_id)
 
-            with open('{}/log{}.csv'.format(self.directory_path, self.time_id), 'a') as f:
-                writer = csv.writer(f)
-                writer.writerow(
-                    [self.time_id, self.max_test_acc, self.epoch_test_max, self.config["MLP"]])
+
 
         end_time = timer()
         print("Finish training, it took: {} sec ".format(round(end_time - self.start_time, 2)))
 
-        return self.time_id, self.max_test_acc, self.epoch_test_max
 
     def predict(self, stocks_id, sml, features):
 

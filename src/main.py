@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
     class_1_classifier = MainClassifier('class_1', 'conv', train, test, num_of_classes)
     class_2_classifier = MainClassifier('class_2', 'conv', train, test, num_of_classes)
-    class_3_classifier = MainClassifier('class_3', 'PlozNet', train, test, num_of_classes*num_of_classes)
+    class_3_classifier = MainClassifier('class_3', 'PlozNet', train, test, num_of_classes)
 
 
     # run_training(class_1_classifier)

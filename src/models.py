@@ -202,7 +202,7 @@ class ConvNet(nn.Module):
 
 class PlozNet(nn.Module):
     def __init__(self, num_of_ids, num_of_classes):
-        super(ConvNet, self).__init__()
+        super(PlozNet, self).__init__()
 
         self.first_layer = nn.Sequential(
             nn.Conv2d(1, 30, kernel_size=config["MLP"]["first_layer_kernel"], padding=1),
@@ -228,9 +228,9 @@ class PlozNet(nn.Module):
         self.avgpool = nn.AvgPool2d(1, stride=1)
         self.dropout = nn.Dropout(p=0.5)
         self.pre_first_layer = nn.Linear(88, 120)
-        self.linear = nn.Linear_1(58190, self.num_of_classes)
-        self.linear = nn.Linear_2(58190, self.num_of_classes)
-        self.linear = nn.Linear_3(58190, self.num_of_classes*self.num_of_classes)
+        self.linear_1 = nn.Linear(58190, self.num_of_classes)
+        self.linear_2 = nn.Linear(58190, self.num_of_classes)
+        self.linear_3 = nn.Linear(58190, self.num_of_classes*self.num_of_classes)
 
         self.softmax = nn.Softmax(dim=1)
 
