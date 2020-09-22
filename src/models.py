@@ -5,7 +5,7 @@ import yaml
 config = yaml.safe_load(open("config.yaml"))
 
 
-class MLPModel(nn.Module):
+class MLPModel1(nn.Module):
     def __init__(self, num_of_ids):
         super(MLPModel, self).__init__()
 
@@ -15,24 +15,6 @@ class MLPModel(nn.Module):
         self.id_embedding = nn.Embedding(num_of_ids, config["MLP"]["id_emb_dim"])
         self.sml_embedding = nn.Embedding(3, config["MLP"]["sml_emb_dim"])
 
-        # self.seq = nn.Sequential(
-        #     nn.Linear(self.input_size, self.hidden_size),
-        #     nn.Tanh(),
-        #     nn.Linear(self.hidden_size, self.hidden_size),
-        #     nn.Tanh(),
-        #     nn.Linear(self.hidden_size, int((3/4) * self.hidden_size)),
-        #     nn.Tanh(),
-        #     nn.Linear(int((3 / 4) * self.hidden_size), int((2 / 4) * self.hidden_size)),
-        #     nn.Tanh(),
-        #     nn.Linear(int((2 / 4) * self.hidden_size), int((1 / 4) * self.hidden_size)),
-        #     nn.Tanh(),
-        #     nn.Linear(int((1 / 4) * self.hidden_size), int((1 / 8) * self.hidden_size)),
-        #     nn.Tanh(),
-        #     nn.Linear(int((1 / 8) * self.hidden_size), int((1 / 16) * self.hidden_size)),
-        #     nn.Tanh(),
-        #     nn.Linear(int((1 / 16) * self.hidden_size), 2),
-        #     nn.Softmax(dim=1)
-        # )
 
         self.seq = nn.Sequential(
             nn.Linear(self.input_size, self.hidden_size),
@@ -47,6 +29,70 @@ class MLPModel(nn.Module):
         x = self.seq(x)
         return x
 
+
+class MLPModel(nn.Module):
+    def __init__(self, num_of_ids):
+        super(MLPModel, self).__init__()
+
+        self.num_of_classes = config["MLP"]["num_of_classes"]
+        self.hidden_size = config["MLP"]["hidden_size"]
+        self.input_size = config["MLP"]["input_size"]
+
+        self.id_embedding = nn.Embedding(num_of_ids, config["MLP"]["id_emb_dim"])
+        self.sml_embedding = nn.Embedding(3, config["MLP"]["sml_emb_dim"])
+
+
+        self.seq1 = nn.Sequential(
+            nn.Linear(self.input_size, self.hidden_size),
+            nn.Tanh(),
+            nn.Linear(self.hidden_size, self.num_of_classes),
+        )
+
+        self.seq2 = nn.Sequential(
+            nn.Linear(self.input_size, 100),
+            nn.Tanh(),
+            nn.Linear(100, 100),
+            nn.Tanh(),
+            nn.Linear(100, self.num_of_classes),
+        )
+
+        self.seq3 = nn.Sequential(
+            nn.Linear(self.input_size, 300),
+            nn.ReLU(),
+            nn.Linear(300, self.num_of_classes),
+        )
+
+        self.seq4 = nn.Sequential(
+            nn.Linear(self.input_size, 200),
+            nn.Tanh(),
+            nn.Linear(200, 50),
+            nn.ReLU(),
+            nn.Linear(50, self.num_of_classes),
+        )
+
+        self.w1 = torch.nn.Parameter(data=torch.Tensor(1), requires_grad=True)
+        self.w1.data.uniform_(-1, 1)
+
+        self.w2 = torch.nn.Parameter(data=torch.Tensor(1), requires_grad=True)
+        self.w2.data.uniform_(-1, 1)
+
+        self.w3 = torch.nn.Parameter(data=torch.Tensor(1), requires_grad=True)
+        self.w3.data.uniform_(-1, 1)
+
+        self.w4 = torch.nn.Parameter(data=torch.Tensor(1), requires_grad=True)
+        self.w4.data.uniform_(-1, 1)
+
+    def forward(self, stock_id, sml,  x):
+        stock_id = self.id_embedding(stock_id)
+        sml = self.sml_embedding(sml)
+        x = torch.cat([stock_id, sml, x], 1)
+        x1 = self.seq1(x)
+        x2 = self.seq2(x)
+        x3 = self.seq3(x)
+        x4 = self.seq4(x)
+        x = (self.w1.mul(x1) + self.w2.mul(x2) + self.w3.mul(x3) + self.w4.mul(x4)) / (self.w1 + self.w2 + self.w3 + self.w4)
+        # x = (x1 + x2 + x3) / 3
+        return x
 
 class LSTMModel(nn.Module):
 
@@ -129,6 +175,8 @@ class ConvNet(nn.Module):
             nn.BatchNorm2d(30),
             nn.ReLU(),
         )
+
+        self.num_of_classes = config["MLP"]["num_of_classes"]
         self.id_embedding = nn.Embedding(num_of_ids, config["MLP"]["id_emb_dim"])
         self.sml_embedding = nn.Embedding(3, config["MLP"]["sml_emb_dim"])
 
@@ -146,7 +194,7 @@ class ConvNet(nn.Module):
         self.avgpool = nn.AvgPool2d(1, stride=1)
         self.dropout = nn.Dropout(p=0.5)
         self.pre_first_layer = nn.Linear(88, 120)
-        self.linear = nn.Linear(2530, 2)
+        self.linear = nn.Linear(58190, self.num_of_classes)
 
         self.softmax = nn.Softmax(dim=1)
 
@@ -156,8 +204,8 @@ class ConvNet(nn.Module):
         sml = self.sml_embedding(sml)
         x = torch.cat([stock_id, sml, x], 1)
         # x = self.pre_first_layer(x)
-        # x = [x.unsqueeze(1) for i in range(x.shape[1])]
-        x = [x.unsqueeze(1) for i in range(1)]
+        x = [x.unsqueeze(1) for i in range(x.shape[1])]
+        # x = [x.unsqueeze(1) for i in range(1)]
         x = torch.cat(x, 1).unsqueeze(1)
         x = self.first_layer(x)
         x = self.a3(x)

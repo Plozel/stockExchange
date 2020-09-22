@@ -14,10 +14,8 @@ import torch.nn as nn
 
 from tqdm import tqdm
 
-from Utils.stock_dataset import StockExchangeDataset
 from Utils.utils import print_plots, FocalLoss, box_print
 from models import MLPModel, ConvNet
-
 
 
 class MainClassifier:
@@ -39,6 +37,7 @@ class MainClassifier:
         # set the model and it's utils
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.target_name = target_name
+
         if model == "conv":
             self.model = ConvNet(self.num_of_ids).to(self.device)
         else:
@@ -49,6 +48,8 @@ class MainClassifier:
                 exit()
 
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.config["MLP"]["lr"])
+
+        # self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.config["MLP"]["lr"])
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=30, verbose=True)
         self.criterion = nn.CrossEntropyLoss().to(self.device)
 
