@@ -20,7 +20,7 @@ from models import MLPModel, ConvNet
 
 class MainClassifier:
 
-    def __init__(self, target_name, model, train_dataset, test_dataset):
+    def __init__(self, target_name, model, train_dataset, test_dataset, num_of_classes):
         super().__init__()
 
         # config.yaml control the settings and other hyper parameters
@@ -30,19 +30,21 @@ class MainClassifier:
         self.test = test_dataset
 
         self.num_of_ids = len(self.train.id_to_idx)
+        self.num_of_classes = num_of_classes
 
         self.train_loader = DataLoader(self.train, self.config["MLP"]["batch_size"], shuffle=True, num_workers=8, pin_memory=True)
         self.test_loader = DataLoader(self.test, self.config["MLP"]["batch_size"], shuffle=False, num_workers=8, pin_memory=True)
+
 
         # set the model and it's utils
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.target_name = target_name
 
         if model == "conv":
-            self.model = ConvNet(self.num_of_ids).to(self.device)
+            self.model = ConvNet(self.num_of_ids, self.num_of_classes).to(self.device)
         else:
             if model == "mlp":
-                self.model = MLPModel(self.num_of_ids).to(self.device)
+                self.model = MLPModel(self.num_of_ids, self.num_of_classes).to(self.device)
             else:
                 print("Invalid model")
                 exit()
@@ -95,11 +97,12 @@ class MainClassifier:
         i = 0
         for test_batch in tqdm(self.test_loader):
             with torch.no_grad():
-                stocks_id, sml, features, true_labels_1, true_labels_2 = test_batch[0].to(self.device), \
+                stocks_id, sml, features, true_labels_1, true_labels_2, true_labels_3 = test_batch[0].to(self.device), \
                                                         test_batch[1].to(self.device), \
                                                         test_batch[2].to(self.device), \
                                                         test_batch[3].to(self.device), \
-                                                        test_batch[4].to(self.device)
+                                                        test_batch[4].to(self.device), \
+                                                        test_batch[5].to(self.device)
 
                 if self.target_name == 'class_1':
                     true_labels = true_labels_1
@@ -107,8 +110,11 @@ class MainClassifier:
                     if self.target_name == 'class_2':
                         true_labels = true_labels_2
                     else:
-                        print("Invalid target")
-                        exit()
+                        if self.target_name == 'class_3':
+                            true_labels = true_labels_3
+                        else:
+                            print("Invalid target")
+                            exit()
 
                 output = self.model(stocks_id, sml, features).to(self.device)
                 loss = self.criterion(output, true_labels)
@@ -173,11 +179,12 @@ class MainClassifier:
 
             i = 0
             for train_batch in tqdm(self.train_loader):
-                stocks_id, sml, features, true_labels_1, true_labels_2 = train_batch[0].to(self.device),\
+                stocks_id, sml, features, true_labels_1, true_labels_2, true_labels_3 = train_batch[0].to(self.device),\
                                                                train_batch[1].to(self.device),\
                                                                train_batch[2].to(self.device),\
                                                                train_batch[3].to(self.device), \
-                                                               train_batch[4].to(self.device)
+                                                               train_batch[4].to(self.device),\
+                                                               train_batch[5].to(self.device)
 
                 if self.target_name == 'class_1':
                     true_labels = true_labels_1
@@ -185,8 +192,11 @@ class MainClassifier:
                     if self.target_name == 'class_2':
                         true_labels = true_labels_2
                     else:
-                        print("Invalid target")
-                        exit()
+                        if self.target_name == 'class_3':
+                            true_labels = true_labels_3
+                        else:
+                            print("Invalid target")
+                            exit()
 
                 self.model.zero_grad()
 

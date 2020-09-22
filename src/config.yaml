@@ -2,8 +2,8 @@
   "Data":{
     "train_seq_set": "train_class_seq",
     "test_seq_set": "test_class_seq",
-    "train_set":"train_class_1_2",
-    "test_set": "test_class_1_2",
+    "train_set":"train_class_1_2_3",
+    "test_set": "test_class_1_2_3",
     "train_percent": 1.0
   } ,
   "LSTM": {

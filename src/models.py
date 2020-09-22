@@ -31,10 +31,10 @@ class MLPModel1(nn.Module):
 
 
 class MLPModel(nn.Module):
-    def __init__(self, num_of_ids):
+    def __init__(self, num_of_ids, num_of_classes):
         super(MLPModel, self).__init__()
 
-        self.num_of_classes = config["MLP"]["num_of_classes"]
+        self.num_of_classes = num_of_classes
         self.hidden_size = config["MLP"]["hidden_size"]
         self.input_size = config["MLP"]["input_size"]
 
@@ -167,7 +167,7 @@ class Inception(nn.Module):
 
 
 class ConvNet(nn.Module):
-    def __init__(self, num_of_ids):
+    def __init__(self, num_of_ids, num_of_classes):
         super(ConvNet, self).__init__()
 
         self.first_layer = nn.Sequential(
@@ -176,7 +176,7 @@ class ConvNet(nn.Module):
             nn.ReLU(),
         )
 
-        self.num_of_classes = config["MLP"]["num_of_classes"]
+        self.num_of_classes = num_of_classes
         self.id_embedding = nn.Embedding(num_of_ids, config["MLP"]["id_emb_dim"])
         self.sml_embedding = nn.Embedding(3, config["MLP"]["sml_emb_dim"])
 

@@ -71,6 +71,8 @@ class StockExchangeDataset(Dataset):
 
         labels_1 = self.data.loc[:, 'class_1']
         labels_2 = self.data.loc[:, 'class_2']
+        labels_3 = self.data.loc[:, 'class_3']
+
         # TODO: ugly...
         # in case of old labels
         # # if self.set_name == "train_class":
@@ -82,6 +84,9 @@ class StockExchangeDataset(Dataset):
         print(" ")
         print("{} class_2 distribution:".format(self.set_name))
         print(labels_2.value_counts(normalize=True))
+        print(" ")
+        print("{} class_3 distribution:".format(self.set_name))
+        print(labels_3.value_counts(normalize=True))
 
 
         sml = torch.tensor(self.data["25/75/YE"].values).long()
@@ -89,7 +94,9 @@ class StockExchangeDataset(Dataset):
         features = torch.tensor(features.values).float()
         real_y_1 = torch.tensor(labels_1.values).long()
         real_y_2 = torch.tensor(labels_2.values).long()
-        dataset = TensorDataset(stocks_id, sml, features, real_y_1, real_y_2)
+        real_y_3 = torch.tensor(labels_3.values).long()
+
+        dataset = TensorDataset(stocks_id, sml, features, real_y_1, real_y_2, real_y_3)
         return dataset
 
     def __len__(self):
