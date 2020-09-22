@@ -185,12 +185,10 @@ class MainClassifier:
                                                                train_batch[3].to(self.device), \
                                                                train_batch[4].to(self.device),\
                                                                train_batch[5].to(self.device)
-
-
                 self.model.zero_grad()
 
                 output_1, output_2, output_3 = self.model(stocks_id, sml, features)
-                output = torch.zeros(output_1.shpae()[0], self.config["MLP"]["num_of_classes"]*self.config["MLP"]["num_of_classes"])
+                output = torch.zeros(output_1.size()[0], self.config["MLP"]["num_of_classes"]*self.config["MLP"]["num_of_classes"])
                 output = output.to(self.device)
                 for i in range(len(output)):
                     for j in range((self.config["MLP"]["num_of_classes"])**2):
@@ -212,8 +210,8 @@ class MainClassifier:
                             output[i][j] = (output_3[i][j]) * (output_1[i][2]) * (output_2[i][1])
                         elif j == 8:
                             output[i][j] = (output_3[i][j]) * (output_1[i][2])*(output_2[i][2])
-                self.softmax = nn.Softmax(dim=1)
-                output = self.softmax(output)
+                softmax = nn.Softmax(dim=1)
+                output = softmax(output)
 
                 # extracting predictions
                 predicted_prob, predicted = torch.max(output.data, 1)
