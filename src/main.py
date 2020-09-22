@@ -6,7 +6,7 @@ from Utils.stock_dataset import StockExchangeDataset
 from classifiers import MainClassifier
 
 
-def run(classifier):
+def run_training(classifier):
 
     print("Trains on {}".format(classifier))
     print("--------------------")
@@ -32,5 +32,8 @@ if __name__ == '__main__':
     class_2_classifier = MainClassifier('class_2', 'conv', train, test, num_of_classes)
     class_3_classifier = MainClassifier('class_3', 'conv', train, test, num_of_classes*num_of_classes)
 
-    run(class_3_classifier)
+
+    # run_training(class_1_classifier)
+    # run_training(class_2_classifier)
+    run_training(class_3_classifier)
 
