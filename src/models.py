@@ -5,59 +5,93 @@ import yaml
 config = yaml.safe_load(open("config.yaml"))
 
 
-class MLPModel(nn.Module):
-    def __init__(self):
+class MLPModel1(nn.Module):
+    def __init__(self, num_of_ids):
         super(MLPModel, self).__init__()
 
         self.hidden_size = config["MLP"]["hidden_size"]
         self.input_size = config["MLP"]["input_size"]
 
+        self.id_embedding = nn.Embedding(num_of_ids, config["MLP"]["id_emb_dim"])
+        self.sml_embedding = nn.Embedding(3, config["MLP"]["sml_emb_dim"])
+
+
         self.seq = nn.Sequential(
             nn.Linear(self.input_size, self.hidden_size),
             nn.Tanh(),
-            nn.Linear(self.hidden_size, self.hidden_size),
-            nn.Tanh(),
-            nn.Linear(self.hidden_size, int((3/4) * self.hidden_size)),
-            nn.Tanh(),
-            nn.Linear(int((3 / 4) * self.hidden_size), int((2 / 4) * self.hidden_size)),
-            nn.Tanh(),
-            nn.Linear(int((2 / 4) * self.hidden_size), int((1 / 4) * self.hidden_size)),
-            nn.Tanh(),
-            nn.Linear(int((1 / 4) * self.hidden_size), int((1 / 8) * self.hidden_size)),
-            nn.Tanh(),
-            nn.Linear(int((1 / 8) * self.hidden_size), int((1 / 16) * self.hidden_size)),
-            nn.Tanh(),
-            nn.Linear(int((1 / 16) * self.hidden_size), 3),
-            nn.Softmax(dim=1)
+            nn.Linear(self.hidden_size, 2),
         )
 
-    def forward(self, x):
+    def forward(self, stock_id, sml,  x):
+        stock_id = self.id_embedding(stock_id)
+        sml = self.sml_embedding(sml)
+        x = torch.cat([stock_id, sml, x], 1)
         x = self.seq(x)
         return x
 
 
-class LSTMModel(nn.Module):
+class MLPModel(nn.Module):
+    def __init__(self, num_of_ids, num_of_classes):
+        super(MLPModel, self).__init__()
 
-    def __init__(self,num_of_ids, input_size, hidden_size, num_of_layers, is_bidirectional=False):
-        super(LSTMModel, self).__init__()
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.predictor = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_of_layers,
-                                 bidirectional=is_bidirectional, batch_first=True)
+        self.num_of_classes = num_of_classes
+        self.hidden_size = config["MLP"]["hidden_size"]
+        self.input_size = config["MLP"]["input_size"]
 
-        # self.id_embedding = nn.Embedding(num_of_ids, config["MLP"]["id_emb_dim"])
-        # self.sml_embedding = nn.Embedding(3, config["MLP"]["sml_emb_dim"])
+        self.id_embedding = nn.Embedding(num_of_ids, config["MLP"]["id_emb_dim"])
+        self.sml_embedding = nn.Embedding(3, config["MLP"]["sml_emb_dim"])
 
-        self.linear = nn.Linear(10, 3)
-    def forward(self, x, y, z):
-        # stock_id = self.id_embedding(x)
-        # sml = self.sml_embedding(y)
-        # print(stock_id.shape)
-        # print(sml.shape)
-        # print(z.shape)
-        #
-        # x = torch.cat([stock_id, sml, z], 2)
-        x, _ = self.predictor(z)
-        x = self.linear(x)
+
+        self.seq1 = nn.Sequential(
+            nn.Linear(self.input_size, self.hidden_size),
+            nn.Tanh(),
+            nn.Linear(self.hidden_size, self.num_of_classes),
+        )
+
+        self.seq2 = nn.Sequential(
+            nn.Linear(self.input_size, 100),
+            nn.Tanh(),
+            nn.Linear(100, 100),
+            nn.Tanh(),
+            nn.Linear(100, self.num_of_classes),
+        )
+
+        self.seq3 = nn.Sequential(
+            nn.Linear(self.input_size, 300),
+            nn.ReLU(),
+            nn.Linear(300, self.num_of_classes),
+        )
+
+        self.seq4 = nn.Sequential(
+            nn.Linear(self.input_size, 200),
+            nn.Tanh(),
+            nn.Linear(200, 50),
+            nn.ReLU(),
+            nn.Linear(50, self.num_of_classes),
+        )
+
+        self.w1 = torch.nn.Parameter(data=torch.Tensor(1), requires_grad=True)
+        self.w1.data.uniform_(-1, 1)
+
+        self.w2 = torch.nn.Parameter(data=torch.Tensor(1), requires_grad=True)
+        self.w2.data.uniform_(-1, 1)
+
+        self.w3 = torch.nn.Parameter(data=torch.Tensor(1), requires_grad=True)
+        self.w3.data.uniform_(-1, 1)
+
+        self.w4 = torch.nn.Parameter(data=torch.Tensor(1), requires_grad=True)
+        self.w4.data.uniform_(-1, 1)
+
+    def forward(self, stock_id, sml,  x):
+        stock_id = self.id_embedding(stock_id)
+        sml = self.sml_embedding(sml)
+        x = torch.cat([stock_id, sml, x], 1)
+        x1 = self.seq1(x)
+        x2 = self.seq2(x)
+        x3 = self.seq3(x)
+        x4 = self.seq4(x)
+        x = (self.w1.mul(x1) + self.w2.mul(x2) + self.w3.mul(x3) + self.w4.mul(x4)) / (self.w1 + self.w2 + self.w3 + self.w4)
+        # x = (x1 + x2 + x3) / 3
         return x
 
 
@@ -109,7 +143,7 @@ class Inception(nn.Module):
 
 
 class ConvNet(nn.Module):
-    def __init__(self, num_of_ids):
+    def __init__(self, num_of_ids, num_of_classes):
         super(ConvNet, self).__init__()
 
         self.first_layer = nn.Sequential(
@@ -117,6 +151,8 @@ class ConvNet(nn.Module):
             nn.BatchNorm2d(30),
             nn.ReLU(),
         )
+
+        self.num_of_classes = num_of_classes
         self.id_embedding = nn.Embedding(num_of_ids, config["MLP"]["id_emb_dim"])
         self.sml_embedding = nn.Embedding(3, config["MLP"]["sml_emb_dim"])
 
@@ -132,8 +168,9 @@ class ConvNet(nn.Module):
         self.b5 = Inception(90, 34,  16, 36, 6, 20, 20)
 
         self.avgpool = nn.AvgPool2d(1, stride=1)
-        self.dropout = nn.Dropout(p=0.3)
-        self.linear = nn.Linear(53240, 9)
+        self.dropout = nn.Dropout(p=0.5)
+        self.pre_first_layer = nn.Linear(88, 120)
+        self.linear = nn.Linear(58190, self.num_of_classes)
 
         self.softmax = nn.Softmax(dim=1)
 
@@ -142,7 +179,9 @@ class ConvNet(nn.Module):
         stock_id = self.id_embedding(stock_id)
         sml = self.sml_embedding(sml)
         x = torch.cat([stock_id, sml, x], 1)
+        # x = self.pre_first_layer(x)
         x = [x.unsqueeze(1) for i in range(x.shape[1])]
+        # x = [x.unsqueeze(1) for i in range(1)]
         x = torch.cat(x, 1).unsqueeze(1)
         x = self.first_layer(x)
         x = self.a3(x)
@@ -161,16 +200,17 @@ class ConvNet(nn.Module):
 
         return self.softmax(x)
 
-
-class ConvNetFactor(nn.Module):
-    def __init__(self, num_of_ids):
-        super(ConvNetFactor, self).__init__()
+class PlozNet(nn.Module):
+    def __init__(self, num_of_ids, num_of_classes):
+        super(ConvNet, self).__init__()
 
         self.first_layer = nn.Sequential(
             nn.Conv2d(1, 30, kernel_size=config["MLP"]["first_layer_kernel"], padding=1),
             nn.BatchNorm2d(30),
             nn.ReLU(),
         )
+
+        self.num_of_classes = num_of_classes
         self.id_embedding = nn.Embedding(num_of_ids, config["MLP"]["id_emb_dim"])
         self.sml_embedding = nn.Embedding(3, config["MLP"]["sml_emb_dim"])
 
@@ -186,51 +226,40 @@ class ConvNetFactor(nn.Module):
         self.b5 = Inception(90, 34,  16, 36, 6, 20, 20)
 
         self.avgpool = nn.AvgPool2d(1, stride=1)
-        self.dropout = nn.Dropout(p=0.3)
-        self.linear1 = nn.Linear(58190, 3)
-        self.linear2 = nn.Linear(58190, 3)
+        self.dropout = nn.Dropout(p=0.5)
+        self.pre_first_layer = nn.Linear(88, 120)
+        self.linear = nn.Linear_1(58190, self.num_of_classes)
+        self.linear = nn.Linear_2(58190, self.num_of_classes)
+        self.linear = nn.Linear_3(58190, self.num_of_classes*self.num_of_classes)
+
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, stock_id, sml,  x):
+
         stock_id = self.id_embedding(stock_id)
         sml = self.sml_embedding(sml)
         x = torch.cat([stock_id, sml, x], 1)
+        # x = self.pre_first_layer(x)
         x = [x.unsqueeze(1) for i in range(x.shape[1])]
+        # x = [x.unsqueeze(1) for i in range(1)]
         x = torch.cat(x, 1).unsqueeze(1)
-        #################################################################
-        #                       X1                                      #
-        #################################################################
-        x1 = self.first_layer(x)
-        x1 = self.a3(x1)
-        x1 = self.b3(x1)
-        x1 = self.maxpool(x1)
-        x1 = self.a4(x1)
-        x1 = self.b4(x1)
-        x1 = self.maxpool(x1)
-        x1 = self.a5(x1)
-        x1 = self.b5(x1)
-        x1 = self.dropout(x1)
-        x1 = self.avgpool(x1)
-        x1 = x1.view(x1.size(0), -1)
-        #print("tom",x.shape)
-        x2 = self.linear2(x1)
-        x1 = self.linear1(x1)
-        """
-        #################################################################
-        #                       X2                                      #
-        #################################################################
-        x2 = self.first_layer(x)
-        x2 = self.a3(x2)
-        x2 = self.b3(x2)
-        x2 = self.maxpool(x2)
-        x2 = self.a4(x2)
-        x2 = self.b4(x2)
-        x2 = self.maxpool(x2)
-        x2 = self.a5(x2)
-        x2 = self.b5(x2)
-        x2 = self.dropout(x2)
-        x2 = self.avgpool(x2)
-        x2 = x2.view(x2.size(0), -1)
-        #print("tom",x.shape)
-        x2 = self.linear(x2)"""
-        return self.softmax(x1), self.softmax(x2)
+        x = self.first_layer(x)
+        x = self.a3(x)
+        x = self.b3(x)
+        x = self.maxpool(x)
+        x = self.a4(x)
+        x = self.b4(x)
+        x = self.maxpool(x)
+        x = self.a5(x)
+        x = self.b5(x)
+        x = self.dropout(x)
+        x = self.avgpool(x)
+        x = x.view(x.size(0), -1)
+        # print(x.shape)
+        x_1 = self.linear_1(x)
+        x_2 = self.linear_2(x)
+        x_3 = self.linear_3(x)
+
+        return self.softmax(x_1), self.softmax(x_2), self.softmax(x_3)
+
+
