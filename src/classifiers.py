@@ -62,10 +62,10 @@ class MainClassifier:
         # loss/acc trackers through time (epochs)
         self.train_loss_list = []
         self.test_loss_list = []
-        self.train_acc_list = []
-        self.test_acc_list = []
-        self.train_confident_acc_list = []
-        self.test_confident_acc_list = []
+        self.train_acc_list_1 = []
+        self.train_acc_list_2 = []
+        self.test_acc_list_1 = []
+        self.test_acc_list_2 = []
 
         self.max_test_acc = 0
         self.epoch_test_max = 0
@@ -93,7 +93,7 @@ class MainClassifier:
         num_of_correct_2 = 0
         num_of_obs = 0
 
-        i = 0
+        k = 0
         for test_batch in tqdm(self.test_loader):
             with torch.no_grad():
                 stocks_id, sml, features, true_labels_1, true_labels_2, true_labels_3 = test_batch[0].to(self.device), \
@@ -104,8 +104,7 @@ class MainClassifier:
                                                         test_batch[5].to(self.device)
 
                 output_1, output_2, output_3 = self.model(stocks_id, sml, features)
-                output = torch.zeros(output_1.shpae()[0],
-                                     self.config["MLP"]["num_of_classes"] * self.config["MLP"]["num_of_classes"])
+                output = torch.zeros(output_1.size()[0],self.config["MLP"]["num_of_classes"] * self.config["MLP"]["num_of_classes"])
                 output = output.to(self.device)
                 for i in range(len(output)):
                     for j in range((self.config["MLP"]["num_of_classes"]) ** 2):
@@ -127,8 +126,8 @@ class MainClassifier:
                             output[i][j] = (output_3[i][j]) * (output_1[i][2]) * (output_2[i][1])
                         elif j == 8:
                             output[i][j] = (output_3[i][j]) * (output_1[i][2]) * (output_2[i][2])
-                self.softmax = nn.Softmax(dim=1)
-                output = self.softmax(output)
+                softmax = nn.Softmax(dim=1)
+                output = softmax(output)
                 loss = self.criterion(output, true_labels_3)
                 printable_loss += loss.item()
                 # extracting predictions
@@ -142,12 +141,20 @@ class MainClassifier:
                         num_of_correct_1 += 1
                     elif (true_labels_1[i] == 2) and (predicted[i] in(6, 7, 8)):
                         num_of_correct_1 += 1
+                for i in range(len(true_labels_2)):
+                    if (true_labels_2[i] == 0) and (predicted[i] in (0, 3, 6)):
+                        num_of_correct_2 += 1
+                    elif (true_labels_2[i] == 1) and (predicted[i] in (1, 4, 7)):
+                        num_of_correct_2 += 1
+                    elif (true_labels_2[i] == 2) and (predicted[i] in (2, 5, 8)):
+                        num_of_correct_2 += 1
 
-                i += 1
+                k += 1
 
         self.scheduler.step(printable_loss)
 
-        self.test_acc_list.append(num_of_correct_1.item() / num_of_obs)
+        self.test_acc_list_1.append(num_of_correct_1 / num_of_obs)
+        self.test_acc_list_2.append(num_of_correct_2 / num_of_obs)
         self.test_loss_list.append(printable_loss / i)
 
 
@@ -177,7 +184,7 @@ class MainClassifier:
             num_of_correct_2 = 0
             num_of_obs = 0
 
-            i = 0
+            k = 0
             for train_batch in tqdm(self.train_loader):
                 stocks_id, sml, features, true_labels_1, true_labels_2, true_labels_3 = train_batch[0].to(self.device),\
                                                                train_batch[1].to(self.device),\
@@ -230,9 +237,17 @@ class MainClassifier:
                         num_of_correct_1 += 1
                     elif (true_labels_1[i] == 2) and (predicted[i] in(6, 7, 8)):
                         num_of_correct_1 += 1
+                for i in range(len(true_labels_2)):
+                    if (true_labels_2[i] == 0) and (predicted[i] in(0, 3, 6)):
+                        num_of_correct_2 += 1
+                    elif (true_labels_2[i] == 1) and (predicted[i] in(1, 4, 7)):
+                        num_of_correct_2 += 1
+                    elif (true_labels_2[i] == 2) and (predicted[i] in(2, 5, 8)):
+                        num_of_correct_2 += 1
 
 
-                i += 1
+                k += 1
+
 
             predictions.extend(predicted.tolist())
             predictions = pd.Series(predictions)
@@ -240,15 +255,16 @@ class MainClassifier:
             print("Current train predictions distribution:\n{}\n".format(predictions.value_counts(normalize=True)))
             print("=================================================================\n")
 
-            self.train_acc_list.append(num_of_correct_1.item() / num_of_obs)
+            self.train_acc_list_1.append(num_of_correct_1 / num_of_obs)
+            self.train_acc_list_2.append(num_of_correct_2 / num_of_obs)
             self.train_loss_list.append(printable_loss / i)
 
 
             # test the current model
-            #self.run_test()
+            self.run_test()
             print(
-                "Epoch:{} Completed,\tTrain Loss:{},\t Train ACC:{}".format(self.current_epoch + 1, self.train_loss_list[-1],
-                                                                  self.train_acc_list[-1]))
+                "Epoch:{} Completed,\tTrain Loss:{},\t Train ACC_1:{} ,\t train ACC_2: {}, \t Test ACC_1: {}, \t Test ACC_2: {}".format(self.current_epoch + 1, self.train_loss_list[-1],
+                                                                  self.train_acc_list_1[-1], self.train_acc_list_2[-1], self.test_acc_list_1[-1], self.test_acc_list_2[-1]))
             """print(
                 "Epoch:{} Completed,\tTrain Loss:{},\t Train ACC:{},\t Train confident ACC:{} \tTest Loss:{},"
                 " \t Test ACC:{},\t Test confident ACC:{}".format(self.current_epoch + 1, self.train_loss_list[-1],

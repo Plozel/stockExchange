@@ -24,6 +24,8 @@ if __name__ == '__main__':
     num_of_classes = config["MLP"]["num_of_classes"]
     print("\nBuilding the train dataset:")
     train = StockExchangeDataset(config["Data"]["train_set"])
+    print("####################################")
+    print(train)
     print("\nBuilding the test dataset:")
     # the test use the id to idx of the train
     test = StockExchangeDataset(config["Data"]["test_set"], train.id_to_idx)

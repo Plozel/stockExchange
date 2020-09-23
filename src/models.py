@@ -228,10 +228,27 @@ class PlozNet(nn.Module):
         self.avgpool = nn.AvgPool2d(1, stride=1)
         self.dropout = nn.Dropout(p=0.5)
         self.pre_first_layer = nn.Linear(88, 120)
-        self.linear_1 = nn.Linear(58190, self.num_of_classes)
-        self.linear_2 = nn.Linear(58190, self.num_of_classes)
-        self.linear_3 = nn.Linear(58190, self.num_of_classes*self.num_of_classes)
-
+        #self.linear_1 = nn.Linear(58190, self.num_of_classes)
+        #self.linear_2 = nn.Linear(58190, self.num_of_classes)
+        #self.linear_3 = nn.Linear(58190, self.num_of_classes*self.num_of_classes)
+        self.linear_1 = nn.Sequential(
+            nn.Linear(58190, 100),
+            nn.Tanh(),
+            nn.Linear(100, 100),
+            nn.Tanh(),
+            nn.Linear(100, self.num_of_classes))
+        self.linear_2 = nn.Sequential(
+            nn.Linear(58190, 100),
+            nn.Tanh(),
+            nn.Linear(100, 100),
+            nn.Tanh(),
+            nn.Linear(100, self.num_of_classes))
+        self.linear_3 = nn.Sequential(
+            nn.Linear(58190, 100),
+            nn.Tanh(),
+            nn.Linear(100, 100),
+            nn.Tanh(),
+            nn.Linear(100, self.num_of_classes*self.num_of_classes))
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, stock_id, sml,  x):
