@@ -40,7 +40,7 @@ class StockExchangeDataset(Dataset):
         stocks_id = stocks_id.map(self.id_to_idx)
 
         features = self.data.iloc[:, np.r_[36:79, 11:26]]
-        print(features.columns)
+
         # normalize the features
         # features = (features - features.mean()) / features.std()
 
@@ -49,8 +49,16 @@ class StockExchangeDataset(Dataset):
 
         # scale the features between 0 to 1
         num_rows = features.shape[0]
-        if self.set_name == "train_class":
+        if self.set_name == config["Data"]["train_set"]:
 
+            s_features = []
+            for i in range(50):
+                current_slice = features.iloc[int(i * (num_rows/50)):int((i+1) * (num_rows/50)), :]
+                current_slice = (current_slice - current_slice.mean()) / current_slice.std()
+                current_slice = (current_slice - current_slice.min()) / current_slice.max()
+                s_features.append(current_slice)
+            features = pd.concat(s_features)
+        else:
             s_features = []
             for i in range(10):
                 current_slice = features.iloc[int(i * (num_rows/10)):int((i+1) * (num_rows/10)), :]
@@ -58,58 +66,34 @@ class StockExchangeDataset(Dataset):
                 current_slice = (current_slice - current_slice.min()) / current_slice.max()
                 s_features.append(current_slice)
             features = pd.concat(s_features)
-        else:
-            features = (features - features.mean()) / features.std()
-            features = (features - features.min()) / features.max()
 
-        labels = self.data.loc[:, 'class_1']
+        labels_1 = self.data.loc[:, 'class_1']
         labels_2 = self.data.loc[:, 'class_2']
-        real_y_1_2 = torch.zeros([len(labels)], dtype=torch.long)
-        for i in range(len(labels)):
-            if labels[i] == 0:
-                if labels_2[i] == 0:
-                    real_y_1_2[i] = 0
-                elif labels_2[i] == 1:
-                    real_y_1_2[i] = 1
-                else:
-                    real_y_1_2[i] = 2
-                continue
-            elif labels[i] == 1:
-                if labels_2[i] == 0:
-                    real_y_1_2[i] = 3
-                elif labels_2[i] == 1:
-                    real_y_1_2[i] = 4
-                else:
-                    real_y_1_2[i] = 5
-                continue
-            else:
-                if labels_2[i] == 0:
-                    real_y_1_2[i] = 6
-                elif labels_2[i] == 1:
-                    real_y_1_2[i] = 7
-                else:
-                    real_y_1_2[i] = 8
+        labels_3 = self.data.loc[:, 'class_3']
 
-        print('#######################################################')
-        print(labels)
-        print('#######################################################')
+        # TODO: ugly...
+        # in case of old labels
+        # # if self.set_name == "train_class":
+        # labels = labels.replace({1: 3, 2: 3, 7: 5, 6: 5})
+        # labels = labels.replace({3: 0, 4: 1, 5: 2})
 
-
-        print("{} labels_1 distribution:".format(self.set_name))
-        print(labels.value_counts(normalize=True))
-
+        print("{} class_1 distribution:".format(self.set_name))
+        print(labels_1.value_counts(normalize=True))
+        print(" ")
+        print("{} class_2 distribution:".format(self.set_name))
+        print(labels_2.value_counts(normalize=True))
+        print(" ")
+        print("{} class_3 distribution:".format(self.set_name))
+        print(labels_3.value_counts(normalize=True))
 
         sml = torch.tensor(self.data["25/75/YE"].values).long()
         stocks_id = torch.tensor(stocks_id.values).long()
         features = torch.tensor(features.values).float()
-        real_y_1 = torch.tensor(labels.values).long()
-        print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
-        print(real_y_1)
-        print(real_y_1.shape)
-        print(real_y_1_2.shape)
-        print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
+        real_y_1 = torch.tensor(labels_1.values).long()
         real_y_2 = torch.tensor(labels_2.values).long()
-        dataset = TensorDataset(stocks_id, sml, features, real_y_1, real_y_2, real_y_1_2)
+        real_y_3 = torch.tensor(labels_3.values).long()
+
+        dataset = TensorDataset(stocks_id, sml, features, real_y_1, real_y_2, real_y_3)
         return dataset
 
     def __len__(self):
@@ -117,5 +101,3 @@ class StockExchangeDataset(Dataset):
 
     def __getitem__(self, index):
         return self.dataset[index]
-
-
