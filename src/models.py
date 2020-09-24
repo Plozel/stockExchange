@@ -106,6 +106,7 @@ class LSTMModel(nn.Module):
         # self.sml_embedding = nn.Embedding(3, config["MLP"]["sml_emb_dim"])
 
         self.linear = nn.Linear(10, 3)
+
     def forward(self, x, y, z):
         # stock_id = self.id_embedding(x)
         # sml = self.sml_embedding(y)
@@ -192,7 +193,7 @@ class ConvNet(nn.Module):
         self.b5 = Inception(90, 34,  16, 36, 6, 20, 20)
 
         self.avgpool = nn.AvgPool2d(1, stride=1)
-        self.dropout = nn.Dropout(p=0.5)
+        self.dropout = nn.Dropout(p=0.3)
         self.pre_first_layer = nn.Linear(88, 120)
         self.linear = nn.Linear(58190, self.num_of_classes)
 
@@ -205,7 +206,7 @@ class ConvNet(nn.Module):
         x = torch.cat([stock_id, sml, x], 1)
         # x = self.pre_first_layer(x)
         x = [x.unsqueeze(1) for i in range(x.shape[1])]
-        # x = [x.unsqueeze(1) for i in range(1)]
+        # x = [x.unsqueeze(1) for i in range(3)]
         x = torch.cat(x, 1).unsqueeze(1)
         x = self.first_layer(x)
         x = self.a3(x)
@@ -223,3 +224,4 @@ class ConvNet(nn.Module):
         x = self.linear(x)
 
         return self.softmax(x)
+

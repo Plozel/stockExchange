@@ -51,7 +51,6 @@ class MainClassifier:
 
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.config["MLP"]["lr"])
 
-        # self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.config["MLP"]["lr"])
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=30, verbose=True)
         self.criterion = nn.CrossEntropyLoss().to(self.device)
 
