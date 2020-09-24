@@ -7,10 +7,9 @@
     "train_percent": 1.0
   } ,
   "TrainedModels": {
-    "pkl_path_1": 10,
-    "pkl_path_2": 0.001,
-    "pkl_path_3":2
-
+    "pkl_path_1": "../TrainedModels/BestPickles/class_1.pkl",
+    "pkl_path_2": "../TrainedModels/BestPickles/class_2.pkl",
+    "pkl_path_3": "../TrainedModels/BestPickles/class_3.pkl"
   },
   "MLP": {
     "batch_size": 100,

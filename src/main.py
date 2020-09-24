@@ -16,7 +16,7 @@ def run_training(classifier):
     with open('../TrainedModels/general_log.csv', 'a') as f:
         writer = csv.writer(f)
         writer.writerow(
-            [time_id, max_test_acc, epoch_test_max, *config["MLP"]])
+            [time_id, classifier.target_name, max_test_acc, epoch_test_max, *config["MLP"]])
 
 
 def train_all(_class_1_classifier, _class_2_classifier, _class_3_classifier):
@@ -28,12 +28,19 @@ def train_all(_class_1_classifier, _class_2_classifier, _class_3_classifier):
 
 def load_all(_class_1_classifier, _class_2_classifier, _class_3_classifier):
 
+    print("-----------------------")
+    print("Loading saved models:")
+    print("-----------------------")
+
     _class_1_classifier.load_model(config["TrainedModels"]["pkl_path_1"])
     _class_2_classifier.load_model(config["TrainedModels"]["pkl_path_2"])
     _class_3_classifier.load_model(config["TrainedModels"]["pkl_path_3"])
 
 
 def test_all_separate(_class_1_classifier, _class_2_classifier, _class_3_classifier):
+    print("-----------------------")
+    print("Test all models:")
+    print("-----------------------")
 
     _class_1_classifier.run_test()
     _class_2_classifier.run_test()
@@ -41,6 +48,9 @@ def test_all_separate(_class_1_classifier, _class_2_classifier, _class_3_classif
 
 
 def test_all_together(_class_1_classifier, _class_2_classifier, _class_3_classifier):
+    print("-----------------------")
+    print("Test all models:")
+    print("-----------------------")
 
     test_loader = _class_1_classifier.test_loader
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -51,6 +61,7 @@ def test_all_together(_class_1_classifier, _class_2_classifier, _class_3_classif
 
     i = 0
     num_of_correct = [0, 0, 0]
+    total = 0
     for test_batch in tqdm(test_loader):
         with torch.no_grad():
             stocks_id, sml, features, true_labels_1, true_labels_2, true_labels_3 = test_batch[0].to(device), \
@@ -73,6 +84,11 @@ def test_all_together(_class_1_classifier, _class_2_classifier, _class_3_classif
             num_of_correct[0] += (probs_and_preds[0][1] == true_labels_1).sum()
             num_of_correct[1] += (probs_and_preds[1][1] == true_labels_2).sum()
             num_of_correct[2] += (probs_and_preds[2][1] == true_labels_3).sum()
+            total += len(true_labels_1)
+
+    for i in range(3):
+        print("class_{} ACC:".format(i))
+        print(num_of_correct[i].item()/total)
 
 
 if __name__ == '__main__':
@@ -90,8 +106,8 @@ if __name__ == '__main__':
     class_2_classifier = MainClassifier('class_2', 'conv', train, test, num_of_classes)
     class_3_classifier = MainClassifier('class_3', 'conv', train, test, num_of_classes*num_of_classes)
 
-    train_all(class_1_classifier, class_2_classifier, class_3_classifier)
+    # train_all(class_1_classifier, class_2_classifier, class_3_classifier)
 
-    # load_all(class_1_classifier, class_2_classifier, class_3_classifier)
+    load_all(class_1_classifier, class_2_classifier, class_3_classifier)
 
-    # test_all(class_1_classifier, class_2_classifier, class_3_classifier)
+    test_all_together(class_1_classifier, class_2_classifier, class_3_classifier)
