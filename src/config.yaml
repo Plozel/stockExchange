@@ -12,7 +12,7 @@
     "pkl_path_3": "../TrainedModels/BestPickles/class_3.pkl"
   },
   "MLP": {
-    "batch_size": 100,
+    "batch_size": 1,
     "lr": 0.001,
     "num_of_epochs":3,
     "input_size":88,
