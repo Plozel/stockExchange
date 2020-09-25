@@ -31,9 +31,10 @@ class MainClassifier:
 
         self.num_of_ids = len(self.train.id_to_idx)
         self.num_of_classes = num_of_classes
-
-        self.train_loader = DataLoader(self.train, self.config["MLP"]["batch_size"], shuffle=True, num_workers=8, pin_memory=True)
-        self.test_loader = DataLoader(self.test, self.config["MLP"]["batch_size"], shuffle=False, num_workers=8, pin_memory=True)
+        print("#################")
+        print(self.config["MLP"]["batch_size"])
+        self.train_loader = DataLoader(self.train, batch_size=1, shuffle=True, num_workers=8, pin_memory=True)
+        self.test_loader = DataLoader(self.test, batch_size=1, shuffle=False, num_workers=8, pin_memory=True)
 
 
         # set the model and it's utils
