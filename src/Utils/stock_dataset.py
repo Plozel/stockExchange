@@ -39,13 +39,13 @@ class StockExchangeDataset(Dataset):
         stocks_id = self.data.iloc[:, 0]
         stocks_id = stocks_id.map(self.id_to_idx)
 
-        features = self.data.iloc[:, np.r_[36:79, 11:26]]
+        features = self.data.iloc[:, np.r_[11:79]]
 
         # normalize the features
         # features = (features - features.mean()) / features.std()
 
         # change "25/75/YE" from categorical to integer
-        self.data["25/75/YE"], _ = pd.factorize( self.data["25/75/YE"])
+        self.data["25/75/YE"], _ = pd.factorize(self.data["25/75/YE"])
 
         # scale the features between 0 to 1
         num_rows = features.shape[0]

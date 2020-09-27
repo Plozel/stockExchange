@@ -75,6 +75,11 @@ def test_all_together(_class_1_classifier, _class_2_classifier, _class_3_classif
                        _class_2_classifier.model(stocks_id, sml, features).to(device),
                        _class_3_classifier.model(stocks_id, sml, features).to(device)]
 
+            for i in range(3):
+                with open('../TrainedModels/class_{}_predictions.csv'.format(i), 'a') as f:
+                    writer = csv.writer(f)
+                    writer.writerow([*outputs[i][0].tolist()])
+
             # each element in probs_and_preds is a tuple of maximum probability and
             # the prediction for a certain class- [(probs, predicted),...]
             probs_and_preds = [torch.max(outputs[0].data, 1),
@@ -109,5 +114,5 @@ if __name__ == '__main__':
     # train_all(class_1_classifier, class_2_classifier, class_3_classifier)
 
     load_all(class_1_classifier, class_2_classifier, class_3_classifier)
-
+    #
     test_all_together(class_1_classifier, class_2_classifier, class_3_classifier)

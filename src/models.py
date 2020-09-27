@@ -195,7 +195,7 @@ class ConvNet(nn.Module):
         self.avgpool = nn.AvgPool2d(1, stride=1)
         self.dropout = nn.Dropout(p=0.3)
         self.pre_first_layer = nn.Linear(88, 120)
-        self.linear = nn.Linear(58190, self.num_of_classes)
+        self.linear = nn.Linear(68750, self.num_of_classes)
 
         self.softmax = nn.Softmax(dim=1)
 

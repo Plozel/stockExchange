@@ -11,3 +11,7 @@
 /data/test_class_1_2_new_new.csv
 /data/test_class_1_2_3.csv
 /data/train_class_1_2_3.csv
+/TrainedModels/BestPickles/class_1.pkl
+/TrainedModels/BestPickles/class_2.pkl
+/TrainedModels/BestPickles/class_3.pkl
+/TrainedModels/class_3_predictions.csv
