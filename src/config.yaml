@@ -1,10 +1,7 @@
 {
   "Data":{
-    "train_seq_set": "train_class_seq",
-    "test_seq_set": "test_class_seq",
     "train_set":"train_class_1_2_3",
     "test_set": "test_class_1_2_3",
-    "train_percent": 1.0
   } ,
   "TrainedModels": {
     "pkl_path_1": "../TrainedModels/BestPickles/class_1.pkl",
@@ -12,7 +9,7 @@
     "pkl_path_3": "../TrainedModels/BestPickles/class_3.pkl"
   },
   "MLP": {
-    "batch_size": 1,
+    "batch_size": 500,
     "lr": 0.001,
     "num_of_epochs":15,
     "input_size":98,
