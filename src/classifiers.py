@@ -14,11 +14,12 @@ import torch.nn as nn
 
 from tqdm import tqdm
 
-from Utils.utils import print_plots, FocalLoss, box_print
+from Utils.utils import print_plots, pytorch_count_params
 from models import MLPModel, ConvNet
 
 
 class MainClassifier:
+    """Creates a classifier."""
 
     def __init__(self, target_name, model, train_dataset, test_dataset, num_of_classes):
         super().__init__()
@@ -32,8 +33,8 @@ class MainClassifier:
         self.num_of_ids = len(self.train.id_to_idx)
         self.num_of_classes = num_of_classes
 
-        self.train_loader = DataLoader(self.train, self.config["MLP"]["batch_size"], shuffle=True, num_workers=8, pin_memory=True)
-        self.test_loader = DataLoader(self.test, self.config["MLP"]["batch_size"], shuffle=False, num_workers=8, pin_memory=True)
+        self.train_loader = DataLoader(self.train, self.config["CommonParameters"]["batch_size"], shuffle=True, num_workers=8, pin_memory=True)
+        self.test_loader = DataLoader(self.test, self.config["CommonParameters"]["batch_size"], shuffle=False, num_workers=8, pin_memory=True)
 
 
         # set the model and it's utils
@@ -49,13 +50,13 @@ class MainClassifier:
                 print("Invalid model")
                 exit()
 
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.config["MLP"]["lr"])
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.config["CommonParameters"]["lr"])
 
         self.scheduler = optim.lr_scheduler.ReduceLROnPlateau(self.optimizer, patience=30, verbose=True)
         self.criterion = nn.CrossEntropyLoss().to(self.device)
 
         # a threshold for the confident acc
-        self.threshold = self.config["MLP"]["majority_threshold"]
+        self.threshold = self.config["CommonParameters"]["majority_threshold"]
 
         # loss/acc trackers through time (epochs)
         self.train_loss_list = []
@@ -79,7 +80,10 @@ class MainClassifier:
         os.mkdir(self.directory_path + "/figures")
 
     def run_test(self):
+        """Runs the classifier on the test data."""
 
+        print("The number of parameters in the model is:")
+        print(pytorch_count_params(self.model))
         print("Running a test phase:")
         self.model.eval()
 
@@ -94,6 +98,7 @@ class MainClassifier:
         num_of_obs = 0
 
         i = 0
+        _total = 0
         for test_batch in tqdm(self.test_loader):
             with torch.no_grad():
                 stocks_id, sml, features, true_labels_1, true_labels_2, true_labels_3 = test_batch[0].to(self.device), \
@@ -133,6 +138,7 @@ class MainClassifier:
                 predictions_with_confidence.extend(correct_pred[correct_probs > self.threshold].tolist())
 
                 i += 1
+                _total += len(true_labels_1)
 
         self.scheduler.step(printable_loss)
         self.test_confident_acc_list.append(num_of_correct_with_confidence / (num_of_predicted_with_confidence + 0.0001))
@@ -150,7 +156,8 @@ class MainClassifier:
 
         predictions = pd.Series(predictions)
         predictions_with_confidence = pd.Series(predictions_with_confidence)
-
+        print("")
+        print("Test ACC:{}".format(sum(predictions == real_values)/_total))
         print("\n=================================================================")
         print("test predictions distribution:\n{}\n".format(predictions.value_counts(normalize=True)))
         print("test predictions with confidence distribution:\n{}\n".format(predictions_with_confidence.value_counts(normalize=True)))
@@ -158,9 +165,11 @@ class MainClassifier:
         print("=================================================================\n")
 
     def run_train(self):
+        """Trains the classifier on the train data."""
+
         print("Running the train phase:")
 
-        for epoch in range(self.config["MLP"]["num_of_epochs"]):
+        for epoch in range(self.config["CommonParameters"]["num_of_epochs"]):
 
             print("\nRuns epoch {}:".format(epoch))
             self.model.train()
@@ -206,8 +215,6 @@ class MainClassifier:
                 loss = self.criterion(output, true_labels)
                 printable_loss += loss.item()
                 loss.backward()
-                # To watch the gradient flow:
-                # 1) plot_grad_flow(model.named_parameters())
                 self.optimizer.step()
 
                 # Gathers utils for the trackers (acc/confident acc)
@@ -221,8 +228,6 @@ class MainClassifier:
                 predictions_with_confidence.extend(correct_pred[correct_probs > self.threshold].tolist())
 
                 i += 1
-
-            # 2) plt.show()
 
             predictions = pd.Series(predictions)
             predictions_with_confidence = pd.Series(predictions_with_confidence)
@@ -256,7 +261,7 @@ class MainClassifier:
             with open('{}/log{}.csv'.format(self.directory_path, self.time_id), 'a') as f:
                 writer = csv.writer(f)
                 writer.writerow(
-                    [self.time_id, self.max_test_acc, self.epoch_test_max, self.config["MLP"]])
+                    [self.time_id, self.max_test_acc, self.epoch_test_max, self.config["CommonParameters"]])
 
         end_time = timer()
         print("Finish training, it took: {} sec ".format(round(end_time - self.start_time, 2)))
@@ -264,6 +269,7 @@ class MainClassifier:
         return self.time_id, self.max_test_acc, self.epoch_test_max
 
     def predict(self, stocks_id, sml, features):
+        """Predicts a certain observation."""
 
         output = self.model(stocks_id, sml, features).to(self.device)
         predicted_prob, predicted = torch.max(output.data, 1)
@@ -271,4 +277,6 @@ class MainClassifier:
         return predicted_prob, predicted
 
     def load_model(self, path):
+        """Loads a saved model."""
+
         self.model.load_state_dict(torch.load(path))

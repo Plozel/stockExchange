@@ -4,24 +4,32 @@
     "test_set": "test_class_1_2_3",
   } ,
   "TrainedModels": {
-    "pkl_path_1": "../TrainedModels/BestPickles/class_1.pkl",
-    "pkl_path_2": "../TrainedModels/BestPickles/class_2.pkl",
-    "pkl_path_3": "../TrainedModels/BestPickles/class_3.pkl"
+    "mlp": {
+      "pkl_path_1": "../TrainedModels/BestPickles/mlp/class_1.pkl",
+      "pkl_path_2": "../TrainedModels/BestPickles/mlp/class_2.pkl",
+      "pkl_path_3": "../TrainedModels/BestPickles/mlp/class_3.pkl"
+    },
+    "conv": {
+      "pkl_path_1": "../TrainedModels/BestPickles/class_1.pkl",
+      "pkl_path_2": "../TrainedModels/BestPickles/class_2.pkl",
+      "pkl_path_3": "../TrainedModels/BestPickles/class_3.pkl"
+    },
   },
-  "MLP": {
-    "batch_size": 500,
+  "CommonParameters": {
+    "batch_size": 100,
     "lr": 0.001,
-    "num_of_epochs":15,
+    "num_of_epochs":120,
     "input_size":98,
-    "hidden_size":100,
+    "hidden_size":300,
     "target_idx":80,
     "loss wegihts": [0.98, 0.95, 1.04],
     "first_layer_kernel": 2,
     "id_emb_dim": 20,
     "sml_emb_dim":10,
     "majority_threshold":0.7,
-    "num_of_slice_normalization": 10,
+    "test_num_of_slices": 10,
+    "train_num_of_slices": 50,
     "num_of_classes": 3,
-    "comment": "3 weeks' test + normalization in slices"
+    "comment": "Final parameters"
   }
 }

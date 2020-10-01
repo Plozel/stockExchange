@@ -1,8 +1,10 @@
 import json
 import matplotlib.pyplot as plt
+from functools import reduce
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
 
 def load_config():
     with open('../config.json') as config_file:
@@ -10,10 +12,18 @@ def load_config():
     return config
 
 
+def pytorch_count_params(model):
+    """Counts the number of trainable parameters in a pytorch model."""
+    total_params = sum(reduce(lambda a, b: a*b, x.size()) for x in model.parameters())
+    return total_params
+
+
 def box_print(msg):
+    """Prints inside a box"""
     print("=" * max(len(msg), 100))
     print(msg)
     print("=" * max(len(msg), 100))
+
 
 def print_plots(train_acc_list, train_loss_list, test_acc_list, test_loss_list, directory_path, _time=''):
     """
@@ -52,6 +62,7 @@ def print_plots(train_acc_list, train_loss_list, test_acc_list, test_loss_list, 
 
 
 def plot_grad_flow(named_parameters):
+    """Plots the gradients flow"""
     ave_grads = []
     layers = []
     for n, p in named_parameters:
@@ -69,6 +80,8 @@ def plot_grad_flow(named_parameters):
 
 
 class FocalLoss(nn.modules.loss._WeightedLoss):
+    """Focal loss function implementation"""
+
     def __init__(self, weight=None, gamma=2, reduction='mean'):
         super(FocalLoss, self).__init__(weight, reduction=reduction)
         self.gamma = gamma

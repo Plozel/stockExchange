@@ -13,8 +13,8 @@ class StockExchangeDataset(Dataset):
 
     def __init__(self, set_name, id_to_idx=None):
         super().__init__()
-        self.input_size = config["MLP"]["input_size"]
-        self.target_idx = config["MLP"]["target_idx"]
+        self.input_size = config["CommonParameters"]["input_size"]
+        self.target_idx = config["CommonParameters"]["target_idx"]
         self.set_name = set_name
         self.data = pd.read_csv("../data/{}.csv".format(set_name), quoting=csv.QUOTE_NONE, error_bad_lines=False)
         self.id_to_idx = {}
@@ -26,6 +26,8 @@ class StockExchangeDataset(Dataset):
         self.dataset = self.preprocess_data()
 
     def create_id_dict(self):
+        """Creates a stock_id-idx dictionary."""
+
         stocks_id = self.data.iloc[:, 0]
         stocks_idx = self.data.iloc[:, 0].copy()
         stocks_idx = pd.unique(stocks_id.values.ravel())
@@ -33,35 +35,35 @@ class StockExchangeDataset(Dataset):
         self.id_to_idx = stocks_idx.to_dict()
 
     def preprocess_data(self):
-        """Clean, handle missing data and covert the data to a TensorDataset object"""
+        """Clean, scale, normalize, handle missing data and convert the data to a TensorDataset object"""
+
         # fill missing values
-        # self.data = self.data.where(pd.notna(self.data), self.data.mean(), axis='columns')
+        self.data = self.data.where(pd.notna(self.data), self.data.mean(), axis='columns')
         stocks_id = self.data.iloc[:, 0]
         stocks_id = stocks_id.map(self.id_to_idx)
 
         features = self.data.iloc[:, np.r_[11:79]]
-
-        # normalize the features
-        # features = (features - features.mean()) / features.std()
 
         # change "25/75/YE" from categorical to integer
         self.data["25/75/YE"], _ = pd.factorize(self.data["25/75/YE"])
 
         # scale the features between 0 to 1
         num_rows = features.shape[0]
+        train_slices = config["CommonParameters"]["train_num_of_slices"]
+        test_slices = config["CommonParameters"]["test_num_of_slices"]
         if self.set_name == config["Data"]["train_set"]:
 
             s_features = []
-            for i in range(50):
-                current_slice = features.iloc[int(i * (num_rows/50)):int((i+1) * (num_rows/50)), :]
+            for i in range(train_slices):
+                current_slice = features.iloc[int(i * (num_rows/train_slices)):int((i+1) * (num_rows/train_slices)), :]
                 current_slice = (current_slice - current_slice.mean()) / current_slice.std()
                 current_slice = (current_slice - current_slice.min()) / current_slice.max()
                 s_features.append(current_slice)
             features = pd.concat(s_features)
         else:
             s_features = []
-            for i in range(10):
-                current_slice = features.iloc[int(i * (num_rows/10)):int((i+1) * (num_rows/10)), :]
+            for i in range(test_slices):
+                current_slice = features.iloc[int(i * (num_rows/test_slices)):int((i+1) * (num_rows/test_slices)), :]
                 current_slice = (current_slice - current_slice.mean()) / current_slice.std()
                 current_slice = (current_slice - current_slice.min()) / current_slice.max()
                 s_features.append(current_slice)
@@ -70,12 +72,6 @@ class StockExchangeDataset(Dataset):
         labels_1 = self.data.loc[:, 'class_1']
         labels_2 = self.data.loc[:, 'class_2']
         labels_3 = self.data.loc[:, 'class_3']
-
-        # TODO: ugly...
-        # in case of old labels
-        # # if self.set_name == "train_class":
-        # labels = labels.replace({1: 3, 2: 3, 7: 5, 6: 5})
-        # labels = labels.replace({3: 0, 4: 1, 5: 2})
 
         print("{} class_1 distribution:".format(self.set_name))
         print(labels_1.value_counts(normalize=True))
